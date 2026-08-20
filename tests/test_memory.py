@@ -1,0 +1,17 @@
+import pytest
+from unittest.mock import patch
+from src.memory.process_scanner import ProcessScanner
+
+@patch("src.memory.volatility_wrapper.subprocess.run")
+def test_extract_running_processes(mock_run):
+    # Mock the JSON output from Volatility 3
+    mock_run.return_value.stdout = '[{"PID": 1234, "PPID": 456, "ImageFileName": "cmd.exe", "Handles": 150}]'
+    mock_run.return_value.returncode = 0
+    
+    scanner = ProcessScanner("dummy_memory.raw")
+    processes = scanner.extract_running_processes()
+    
+    assert len(processes) == 1
+    assert processes[0]["pid"] == 1234
+    assert processes[0]["process_name"] == "cmd.exe"
+    assert processes[0]["handles_count"] == 150

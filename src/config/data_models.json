@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ForensicFrameworkDataModels",
+  "definitions": {
+    "EvidenceMetadata": {
+      "type": "object",
+      "required": ["evidence_id", "file_name", "file_path", "image_type", "size_bytes", "hashes", "intake_timestamp_utc"],
+      "properties": {
+        "evidence_id": { "type": "string" },
+        "file_name": { "type": "string" },
+        "file_path": { "type": "string" },
+        "image_type": { "type": "string", "enum": ["disk", "memory"] },
+        "size_bytes": { "type": "integer" },
+        "hashes": {
+          "type": "object",
+          "required": ["md5", "sha256"],
+          "properties": {
+            "md5": { "type": "string" },
+            "sha256": { "type": "string" }
+          }
+        },
+        "intake_timestamp_utc": { "type": "string", "format": "date-time" }
+      }
+    },
+    "DiskArtifact": {
+      "type": "object",
+      "required": ["artifact_type", "source_path", "timestamp", "details"],
+      "properties": {
+        "artifact_type": { "type": "string" },
+        "source_path": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "details": { "type": "object" }
+      }
+    },
+    "MemoryProcess": {
+      "type": "object",
+      "required": ["pid", "ppid", "process_name", "path"],
+      "properties": {
+        "pid": { "type": "integer" },
+        "ppid": { "type": "integer" },
+        "process_name": { "type": "string" },
+        "path": { "type": "string" },
+        "handles_count": { "type": "integer" }
+      }
+    },
+    "CorrelatedEvent": {
+      "type": "object",
+      "required": ["timestamp", "source_module", "event_type", "description", "risk_score"],
+      "properties": {
+        "timestamp": { "type": "string" },
+        "source_module": { "type": "string", "enum": ["disk", "memory", "intake"] },
+        "event_type": { "type": "string" },
+        "description": { "type": "string" },
+        "risk_score": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    }
+  }
+}
