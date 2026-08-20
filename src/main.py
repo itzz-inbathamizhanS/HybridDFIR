@@ -1,3 +1,17 @@
+import sys
+import os
+from pathlib import Path
+
+# Add project root directory to Python path
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+# Existing imports follow below
+import argparse
+from src.intake import EvidenceIntake
+from src.disk import ArtifactExtractor
+# ... rest of your main.py code
 import argparse
 import sys
 from src.intake import EvidenceIntake
