@@ -3,12 +3,17 @@ from unittest.mock import patch
 from src.memory.process_scanner import ProcessScanner
 
 @patch("src.memory.volatility_wrapper.subprocess.run")
-def test_extract_running_processes(mock_run):
+def test_extract_running_processes(mock_run, tmp_path):
     # Mock the JSON output from Volatility 3
     mock_run.return_value.stdout = '[{"PID": 1234, "PPID": 456, "ImageFileName": "cmd.exe", "Handles": 150}]'
     mock_run.return_value.returncode = 0
     
-    scanner = ProcessScanner("dummy_memory.raw")
+    # Create a temporary dummy file on disk so the VolatilityWrapper file check passes
+    dummy_file = tmp_path / "dummy_memory.raw"
+    dummy_file.touch()
+    
+    # Pass the path of the newly created dummy file
+    scanner = ProcessScanner(str(dummy_file))
     processes = scanner.extract_running_processes()
     
     assert len(processes) == 1
