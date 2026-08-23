@@ -4,106 +4,125 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 
-An open-source, air-gapped Command Line Interface (CLI) tool designed for secure, local-only digital forensics analysis. 
+An air-gapped, local digital forensics framework designed to perform advanced correlation between physical memory artifacts and disk-based artifacts. 
 
-This framework securely ingests forensic images, independently parses disk artifacts and memory dumps, and utilizes a heuristic Correlation Engine to merge findings into a unified timeline, scoring potential threats without relying on external APIs or network calls.
+Phase 1 of the framework focuses on **zero-binary, driverless live RAM and process memory inspection** using native Win32 APIs via Python's `ctypes`, bypassing third-party driver blocks and detecting fileless malware, process hollowing, and shellcode injection directly in live physical memory.
 
 ---
 
-## 🌟 Core Features
+## 🌟 Core Features & Key Capabilities
 
+* **Zero-Binary Driverless Inspection**: Live RAM scanning without loading vulnerable or blocklisted kernel drivers (e.g., winpmem).
+* **JIT-Aware Memory Whitelisting**: Intelligently suppresses false positives from known JIT compilers (V8, .NET CLR) and AV products.
+* **Automated Heuristics**: Detects suspicious memory regions (`PAGE_EXECUTE_READWRITE`, `PAGE_EXECUTE_WRITECOPY`, large private executables).
 * **Evidence Intake:** Secure chunk-based MD5 and SHA256 hashing for chain-of-custody validation.
-* **Disk Analysis:** Extracts file system metadata, parses Windows SYSTEM Registry hives, and analyzes Prefetch files to identify executed applications.
-* **Memory Analysis:** Local air-gapped integration with Volatility 3 to extract active processes and hunt for injected code. Includes graceful fallback handling if Volatility is missing.
+* **Disk Analysis:** Extracts file system metadata, parses Windows SYSTEM Registry hives, and analyzes Prefetch files.
 * **Correlation Engine:** Merges disk and memory artifacts into a single chronological timeline and assigns risk scores using heuristic rules.
 * **Action Response:** Automatically generates self-contained JSON data outputs and human-readable HTML dashboards for offline viewing.
 * **Zero External Dependencies:** Built entirely with local libraries to ensure no sensitive forensic data ever leaves your machine.
 
 ---
 
-## 📂 Project Structure
+## 📂 System Architecture & Project Structure
+
+The framework is built using a highly modular pipeline approach:
 
 ```text
 hybrid-forensics-framework/
-├── docs/                 # System architecture and documentation
-├── src/                  # Core Application Code
-│   ├── main.py           # CLI Entry point & orchestrator
-│   ├── config/           # Enforces local-only execution & JSON schemas
-│   ├── intake/           # Evidence hashing and validation
-│   ├── disk/             # File system parsing & artifact extraction
-│   ├── memory/           # Process scanning & Volatility wrapper
-│   ├── correlation/      # Timeline builder and heuristic threat scorer
-│   └── response/         # JSON and HTML report generation
-├── tests/                # Automated Pytest suite (Master Revision Loop)
-└── output/               # Generated reports and logs (Git-ignored)
+├── docs/                      # Architectural documentation and guides
+├── output/                    # Generated JSON and HTML reports
+├── src/
+│   ├── capture/               # Phase 1: Native Live RAM scanning (Win32 APIs)
+│   │   ├── native_ram.py      # Core zero-binary memory walking & heuristics
+│   │   └── live_ram.py        # Volatility-based acquisition (fallback)
+│   ├── config/                # Global configuration & JSON schemas
+│   ├── correlation/           # Threat scoring and timeline building
+│   ├── disk/                  # Disk artifact extraction & parsing
+│   ├── intake/                # Evidence validation and hashing
+│   ├── memory/                # Process scanning and Volatility wrappers
+│   └── response/              # HTML/JSON report generation
+├── tests/                     # Unit and integration tests
+├── requirements.txt           # Python dependencies (rich, questionary)
+└── main.py                    # Interactive CLI Orchestrator
+```
 
+## 🛠️ Step-by-Step Installation & Setup
 
-🛠️ Step-by-Step Installation & Setup
-Prerequisites
-Python 3.8+
+**Prerequisites**
+*   Python 3.8+
+*   Git
+*   Volatility 3 (Required for analyzing real memory images. Install via `pip install volatility3`)
 
-Git
+**Installation**
 
-Volatility 3 (Required for analyzing real memory images. Install via pip install volatility3)
-
-Installation
-Clone the repository:
-
-Bash
-git clone [https://github.com/vedhan7/hybrid-forensics-framework.git](https://github.com/vedhan7/hybrid-forensics-framework.git)
+```bash
+git clone https://github.com/vedhan7/hybrid-forensics-framework.git
 cd hybrid-forensics-framework
-Create a virtual environment:
-
-Windows (CMD/PowerShell):
-
-DOS
 python -m venv venv
-Linux/macOS:
+```
 
-Bash
-python3 -m venv venv
-Activate the virtual environment:
+**Activate the virtual environment:**
 
 Windows (CMD):
-
-DOS
+```cmd
 venv\Scripts\activate
+```
+
 Windows (PowerShell):
-
-PowerShell
+```powershell
 .\venv\Scripts\Activate.ps1
+```
+
 Linux/macOS:
-
-Bash
+```bash
 source venv/bin/activate
-Install dependencies:
+```
 
-Bash
-pip install pytest
-💻 Running the Framework
-The framework is executed entirely via the command line orchestrator (src/main.py).
+**Install dependencies:**
+```bash
+pip install -r requirements.txt
+```
 
-1. Analyzing a Memory Dump
-Bash
-python src/main.py --image "C:\path\to\evidence\memdump.raw" --type memory
-(To test without a real memory dump, you can create a dummy file: echo "test" > sample.raw and run the command against it).
+## 💻 Usage & Modes of Operation
 
-2. Analyzing a Mounted Disk Image
-Note: Disk images must be mounted locally before running analysis.
+The framework is executed entirely via the command line orchestrator (`src/main.py`).
 
-Bash
-python src/main.py --image "C:\path\to\evidence\disk.dd" --type disk --mount "D:\"
-3. Reviewing Reports
-Outputs are automatically saved in the generated output/<EVIDENCE_ID>/ folder inside your project directory:
+**Note: Native RAM scanning requires Administrator privileges.**
 
-forensic_report.json: Full structured dataset.
+```bash
+python src/main.py
+```
 
-forensic_report.html: Self-contained interactive dashboard viewable in any web browser.
+### Supported Modes
 
-🧪 Testing Suite (Master Revision Loop)
-Run the automated test suite using pytest to ensure all data schemas, intake hashing, and volatility parsers function as expected without requiring actual forensic images:
+1. **Live Capture & Analyze**: Captures the current system RAM (using available methods) and runs the full analysis pipeline.
+2. **Analyze Existing Evidence**: Parses an offline memory or disk image.
+   * *Example offline dump analysis:* `python src/main.py --image "C:\path\to\evidence\memdump.raw" --type memory`
+3. **Native Live RAM Scan (Phase 1)**: Runs the custom zero-binary memory scanner. Inspects all running processes for injection artifacts and surfaces critical threats while suppressing benign JIT noise.
 
-Bash
+### Reviewing Reports
+Outputs are automatically saved in the generated `output/<EVIDENCE_ID>/` folder inside your project directory:
+*   `forensic_report.json`: Full structured dataset.
+*   `forensic_report.html`: Self-contained interactive dashboard viewable in any web browser.
+
+## 🕵️ Threat Heuristics (Phase 1.1)
+
+The Native RAM Scanner uses several heuristics to detect anomalies:
+*   **`RWX_SHELLCODE_INJECTION` (Risk 90)**: Private memory regions with `PAGE_EXECUTE_READWRITE`.
+*   **`RWX_WRITECOPY_SUSPICIOUS` (Risk 80)**: Image memory regions with `PAGE_EXECUTE_WRITECOPY`.
+*   **`LARGE_PRIVATE_EXECUTABLE` (Risk 60)**: `PAGE_EXECUTE_READ` allocations over 1MB without backing files (indicative of hollowing).
+*   **`RWX_GUARD_STAGED_PAYLOAD` (Risk 75)**: Executable pages marked with `PAGE_GUARD`.
+
+*Note: Known JIT engines and AV tools are safely whitelisted to a Risk Score of 10 to reduce CLI noise, while preserving visibility in the final JSON report.*
+
+## 🧪 Testing Suite (Master Revision Loop)
+
+Run the automated test suite using `pytest` to ensure all data schemas, intake hashing, and parsers function as expected:
+
+```bash
 pytest tests/ -v
-⚠️ Disclaimer
-This tool is designed for educational, research, and legitimate incident response purposes. Always ensure you have explicit authorization before analyzing systems or digital evidence.
+```
+
+---
+*Built for modern Windows Endpoint Security Analysis.*
+⚠️ **Disclaimer:** This tool is designed for educational, research, and legitimate incident response purposes. Always ensure you have explicit authorization before analyzing systems or digital evidence.
