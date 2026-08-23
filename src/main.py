@@ -112,59 +112,66 @@ def run_pipeline(image_path: str, image_type: str, mount_point: str = None):
 
     console.print(Panel(summary, title="Execution Summary", border_style="green", box=box.ROUNDED))
 
-if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        # NEW MENU: Ask what action the user wants to take
-        action = questionary.select(
-            "Select operation mode:",
-            choices=[
-                "1. Live Capture & Analyze (Capture current system RAM)",
-                "2. Analyze Existing Evidence (Memory/Disk image)",
-                "3. Native Live RAM Scan (Driverless, zero-binary)"
-            ]
-        ).ask()
+from prompt_toolkit import PromptSession
+from prompt_toolkit.styles import Style
+import shlex
+import time
 
-        if not action:
-            print("[!] Operation cancelled.")
-            sys.exit(0)
-
-        # Handle Live Capture
-        if action.startswith("1"):
-            capturer = LiveRAMCapturer()
-            image_path = capturer.capture_memory()
-            image_type = "memory"
-            mount_point = None
+def interactive_repl():
+    style = Style.from_dict({
+        'prompt': 'ansicyan bold',
+    })
+    session = PromptSession()
+    
+    console.print("\n[bold]Welcome to Hybrid Forensics Framework[/bold]")
+    console.print("Type [bold cyan]/help[/bold cyan] for commands, or [bold cyan]/exit[/bold cyan] to quit.\n")
+    
+    while True:
+        try:
+            # We use a custom formatted text for the prompt
+            text = session.prompt([('class:prompt', '❯ ')], style=style).strip()
+        except KeyboardInterrupt:
+            continue
+        except EOFError:
+            break
             
-            # Immediately pass the freshly captured RAM into your analysis pipeline
-            run_pipeline(image_path, image_type, mount_point)
-
-        # Handle Existing Evidence
-        elif action.startswith("2"):
-            image_path = questionary.path("Enter path to evidence image:").ask()
-            if not image_path:
-                sys.exit(0)
-
-            image_type = questionary.select(
-                "Select analysis type:",
-                choices=["memory", "disk", "hybrid"]
-            ).ask()
-
-            mount_point = None
-            if image_type in ["disk", "hybrid"]:
-                mount_point = questionary.text("Enter mount point (e.g., D:\\):").ask()
-
-            run_pipeline(image_path, image_type, mount_point)
-
-        # Handle Native Live RAM Scan (zero-binary, no driver required)
-        elif action.startswith("3"):
+        if not text:
+            continue
+            
+        # Parse command and arguments
+        try:
+            parts = shlex.split(text)
+        except ValueError as e:
+            console.print(f"[red]Error parsing command: {e}[/red]")
+            continue
+            
+        cmd = parts[0].lower()
+        
+        if cmd in ["/exit", "/quit"]:
+            console.print("[dim]Exiting...[/dim]")
+            break
+        elif cmd == "/clear":
+            os.system('cls' if os.name == 'nt' else 'clear')
+        elif cmd == "/help":
+            table = Table(box=box.SIMPLE_HEAD, title="Available Commands", title_style="bold magenta")
+            table.add_column("Command", style="cyan")
+            table.add_column("Description", style="white")
+            table.add_row("/scan", "Quick read-only memory inspection (table + JSON)")
+            table.add_row("/capture", "Deep forensic capture: scan + process MiniDumps")
+            table.add_row("/capture --driver", "Try winpmem driver first, then native fallback")
+            table.add_row("/analyze <type> <path> [mount]", "Analyze an existing image. Type: memory|disk|hybrid")
+            table.add_row("/clear", "Clear the terminal")
+            table.add_row("/exit", "Exit the framework")
+            console.print(table)
+            console.print()
+        elif cmd == "/scan":
             analyzer = NativeLiveRAMAnalyzer(console=console)
             findings = analyzer.scan_live_ram()
             analyzer.display_findings(findings)
 
-            # Convert to CorrelatedEvent format and save as standalone report
             correlated = analyzer.findings_to_correlated_events(findings)
             if correlated:
-                import json, time
+                import json
                 from src.config.settings import OUTPUT_DIR
                 report_path = OUTPUT_DIR / f"native_ram_scan_{int(time.time())}.json"
                 with open(report_path, "w", encoding="utf-8") as fp:
@@ -175,11 +182,34 @@ if __name__ == "__main__":
                         "raw_findings": findings,
                     }, fp, indent=2)
                 console.print(
-                    f"[bold green]✔ Report saved:[/bold green] {report_path}"
+                    f"\n[bold green]✔ Report saved:[/bold green] {report_path}\n"
                 )
             else:
-                console.print("[green]No threats to report.[/green]")
+                console.print("\n[green]No threats to report.[/green]\n")
+        elif cmd == "/capture":
+            use_driver = "--driver" in parts
+            capturer = LiveRAMCapturer(use_driver=use_driver)
+            result = capturer.capture_memory()
+            if result and result.endswith(".raw"):
+                # winpmem succeeded — run the full Volatility pipeline
+                run_pipeline(result, "memory", None)
+        elif cmd == "/analyze":
+            if len(parts) < 3:
+                console.print("[red]Usage: /analyze <type> <path> [mount_point][/red]")
+                continue
+            itype = parts[1].lower()
+            ipath = parts[2]
+            imount = parts[3] if len(parts) > 3 else None
+            if itype not in ["memory", "disk", "hybrid"]:
+                console.print("[red]Invalid type. Must be memory, disk, or hybrid.[/red]")
+                continue
+            run_pipeline(ipath, itype, imount)
+        else:
+            console.print(f"[red]Unknown command: {cmd}[/red]. Type [cyan]/help[/cyan] for available commands.")
 
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        interactive_repl()
     else:
         # Keep flag-based execution intact
         parser = argparse.ArgumentParser(description="Hybrid Forensics Framework")

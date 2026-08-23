@@ -596,17 +596,19 @@ class NativeLiveRAMAnalyzer:
         """
         events: List[Dict[str, Any]] = []
         for f in findings:
+            risk = min(f["risk_score"], 100)
+            event_type = "THREAT_DETECTED" if risk >= 50 else "INFO_BENIGN_ALLOCATION"
             events.append({
                 "timestamp": f.get("scan_timestamp_utc", datetime.datetime.utcnow().isoformat() + "Z"),
                 "source_module": "memory",
-                "event_type": "THREAT_DETECTED",
+                "event_type": event_type,
                 "description": (
                     f"[NativeRAM] {f['threat_label']} in {f['process_name']} "
                     f"(PID {f['pid']}) at {f['base_address']}  "
                     f"Protection={f['protection_name']}  "
                     f"Size={f['region_size_human']}"
                 ),
-                "risk_score": min(f["risk_score"], 100),
+                "risk_score": risk,
             })
         return events
 
