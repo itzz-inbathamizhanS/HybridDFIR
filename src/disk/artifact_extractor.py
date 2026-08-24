@@ -55,3 +55,10 @@ class ArtifactExtractor:
                         }
                     })
         return artifacts
+
+    def extract_all_artifacts(self) -> list:
+        """Convenience method to extract all supported artifacts."""
+        artifacts = []
+        artifacts.extend(self.extract_system_registry())
+        artifacts.extend(self.extract_prefetch())
+        return artifacts
