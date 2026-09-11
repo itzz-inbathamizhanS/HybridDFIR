@@ -4,61 +4,57 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 
-An air-gapped, local digital forensics framework designed to perform advanced correlation between physical memory artifacts and disk-based artifacts. 
+An air-gapped, local digital forensics framework designed to perform advanced correlation between live memory artifacts, active network connections, process lineage, and persistent registry configurations.
 
-Phase 1 of the framework focuses on **zero-binary, driverless live RAM and process memory inspection** using native Win32 APIs via Python's `ctypes`, bypassing third-party driver blocks and detecting fileless malware, process hollowing, and shellcode injection directly in live physical memory.
-
----
-
-## 🌟 Core Features & Key Capabilities
-
-* **Zero-Binary Driverless Inspection**: Live RAM scanning without loading vulnerable or blocklisted kernel drivers (e.g., winpmem).
-* **JIT-Aware Memory Whitelisting**: Intelligently suppresses false positives from known JIT compilers (V8, .NET CLR) and AV products.
-* **Automated Heuristics**: Detects suspicious memory regions (`PAGE_EXECUTE_READWRITE`, `PAGE_EXECUTE_WRITECOPY`, large private executables).
-* **Evidence Intake:** Secure chunk-based MD5 and SHA256 hashing for chain-of-custody validation with runtime JSON Schema verification.
-* **Disk Analysis:** Extracts file system metadata, parses Windows SYSTEM, SAM, SOFTWARE, SECURITY, and NTUSER.DAT Registry hives, analyzes Prefetch files, Windows Event Logs (.evtx), and Amcache.hve.
-* **Correlation Engine:** Merges disk and memory artifacts into a single chronological timeline and assigns risk scores using multi-layered heuristic rules (parent-child anomalies, timestomping, persistence).
-* **MITRE ATT&CK Mapping:** Automatically maps detected threats to corresponding MITRE ATT&CK TTPs.
-* **Action Response:** Automatically generates self-contained JSON data outputs and professional, interactive HTML dashboards with Chart.js visualizations for offline viewing.
-* **Zero External Dependencies:** Built entirely with local libraries to ensure no sensitive forensic data ever leaves your machine.
+Built entirely around a **100% Native Python & Win32 API (`ctypes`) architecture**, this framework bypasses third-party driver blocklists (e.g., no WinPMEM or Volatility requirements) and executes seamlessly on hardened enterprise endpoints.
 
 ---
 
-## 📂 System Architecture & Project Structure
+## 🌟 Core Features & Capabilities
 
-The framework is built using a highly modular pipeline approach:
+* **Zero-Binary Live Memory Inspection**: Scans live RAM for fileless malware, reflective DLL injection, and process hollowing using native Windows APIs (VirtualQueryEx, Toolhelp32Snapshot).
+* **Process Lineage Mapping**: Builds parent-child process trees to identify masquerading and suspicious execution chains.
+* **DLL Hollowing Detection**: Parses internal PE structures and measures Shannon Entropy to uncover unbacked and packed modules.
+* **Network C2 Auditing**: Correlates outbound connections to running processes via IP Helper APIs (`iphlpapi.dll`).
+* **Persistent Threat Hunting**: Native registry parsing (`winreg`) to hunt for Image File Execution Options (IFEO) hijacking, AppInit_DLLs, and suspicious Run keys.
+* **Cross-Module Evidence Graph**: Unified `CaseManager` correlates findings across Memory, Network, and Persistence to detect complex attack chains (Rules 1-12).
+* **Action Response Dashboards**: Automatically exports heavily typed JSON payloads (`CASE_EXPORT_*.json`) and offline, self-contained interactive HTML dashboards with visual Evidence Graphs.
+* **Air-Gapped & Secure**: Zero external network calls. Cryptographically hashed chain-of-custody audit logs ensure forensic integrity.
+
+---
+
+## 📂 System Architecture
+
+The framework relies on a centralized `CaseManager` state engine that processes data through a multi-stage pipeline:
 
 ```text
 hybrid-forensics-framework/
-├── docs/                      # Architectural documentation and guides
-├── output/                    # Generated JSON and HTML reports
+├── docs/                      # Architectural documentation and methodology
+├── output/                    # Isolated Case containers (JSON + HTML reports)
 ├── src/
-│   ├── capture/               # Phase 1: Native Live RAM scanning (Win32 APIs)
-│   │   ├── native_ram.py      # Core zero-binary memory walking & heuristics
-│   │   └── live_ram.py        # Volatility-based acquisition (fallback)
+│   ├── capture/               # Native Live RAM scanning & DLL inspection
 │   ├── config/                # Global configuration & JSON schemas
-│   ├── correlation/           # Threat scoring, timeline building, and MITRE mapping
-│   ├── disk/                  # Disk artifact extraction (Registry, Prefetch, EVTX)
-│   ├── intake/                # Evidence validation and hashing
-│   ├── memory/                # Process scanning and Volatility wrappers
-│   └── response/              # Interactive HTML/JSON report generation
-├── tests/                     # Unit and integration tests (20+ tests)
-├── requirements.txt           # Python dependencies (rich, questionary, jsonschema, pytest)
+│   ├── core/                  # CaseManager, Audit Logs, and Evidence Graph mapping
+│   ├── correlation/           # ThreatScorer (Rules 1-12) & MITRE ATT&CK mapping
+│   ├── intelligence/          # Local IOC ingestion engine
+│   ├── network/               # Active connection auditing
+│   ├── persistence/           # Registry & Autoruns hunting
+│   └── response/              # HTML Dashboard and JSON Export generation
+├── tests/                     # Pytest suite
 └── main.py                    # Interactive CLI Orchestrator
 ```
 
-## 🛠️ Step-by-Step Installation & Setup
+## 🛠️ Installation & Setup
 
 **Prerequisites**
-*   Python 3.8+
+*   Python 3.8+ (Windows environments only)
 *   Git
-*   Volatility 3 (Required for analyzing real memory images. Install via `pip install volatility3`)
 
 **Installation**
 
 ```bash
-git clone https://github.com/vedhan7/hybrid-forensics-framework.git
-cd hybrid-forensics-framework
+git clone https://github.com/itzz-inbathamizhanS/HybridDFIR.git
+cd HybridDFIR
 python -m venv venv
 ```
 
@@ -74,51 +70,56 @@ Windows (PowerShell):
 .\venv\Scripts\Activate.ps1
 ```
 
-Linux/macOS:
-```bash
-source venv/bin/activate
-```
-
 **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-## 💻 Usage & Modes of Operation
+## 💻 Usage & CLI Operations
 
-The framework is executed entirely via the command line orchestrator (`src/main.py`).
-
+The framework is executed via the `src/main.py` orchestrator.
 **Note: Native RAM scanning requires Administrator privileges.**
 
 ```bash
+# Launch the interactive CLI
 python src/main.py
 ```
 
-### Supported Modes
+### Direct CLI Commands
 
-1. **Live Capture & Analyze**: Captures the current system RAM (using available methods) and runs the full analysis pipeline.
-2. **Analyze Existing Evidence**: Parses an offline memory or disk image.
-   * *Example offline dump analysis:* `python src/main.py --image "C:\path\to\evidence\memdump.raw" --type memory`
-3. **Native Live RAM Scan (Phase 1)**: Runs the custom zero-binary memory scanner. Inspects all running processes for injection artifacts and surfaces critical threats while suppressing benign JIT noise.
+Bypass the interactive menu and run commands directly for automation scripts:
+
+```bash
+# Run a full cross-module forensic sweep and generate a report
+python src/main.py --sweep
+
+# Launch the offline interactive dashboard for the last sweep
+python src/main.py --dashboard
+
+# Re-verify the cryptographic chain-of-custody for a specific case
+python src/main.py --verify-case CASE-20260910-A1B2C3
+
+# Run the built-in self-test simulator
+python src/main.py --self-test
+```
 
 ### Reviewing Reports
-Outputs are automatically saved in the generated `output/<EVIDENCE_ID>/` folder inside your project directory:
-*   `forensic_report.json`: Full structured dataset.
-*   `forensic_report.html`: Self-contained interactive dashboard viewable in any web browser.
+Outputs are automatically saved in isolated case folders:
+`output/CASE-YYYYMMDD-XXXXXX/`
+*   `CASE_EXPORT_<timestamp>.json`: Full structured dataset for SIEM ingestion.
+*   `forensic_report.html`: Self-contained interactive dashboard (requires no internet connection).
 
-## 🕵️ Threat Heuristics (Phase 1.1)
+## 🕵️ Cross-Module Threat Correlation
 
-The Native RAM Scanner uses several heuristics to detect anomalies:
-*   **`RWX_SHELLCODE_INJECTION` (Risk 90)**: Private memory regions with `PAGE_EXECUTE_READWRITE`.
-*   **`RWX_WRITECOPY_SUSPICIOUS` (Risk 80)**: Image memory regions with `PAGE_EXECUTE_WRITECOPY`.
-*   **`LARGE_PRIVATE_EXECUTABLE` (Risk 60)**: `PAGE_EXECUTE_READ` allocations over 1MB without backing files (indicative of hollowing).
-*   **`RWX_GUARD_STAGED_PAYLOAD` (Risk 75)**: Executable pages marked with `PAGE_GUARD`.
+The correlation engine utilizes 12 specific heuristic rules, ranging from isolated anomalies to complex cross-module attack patterns:
+*   **Rule 8 (Process + Network):** Detects highly suspicious memory regions executing outbound connections (C2 implants).
+*   **Rule 9 (Persistence + Memory):** Detects persistent registry entries pointing to active, injected processes in memory.
+*   **Rule 10 (DLL + Memory):** Unbacked injected DLLs matched with RWX memory regions.
+*   **Rule 12 (LOLBin Chaining):** Detects simultaneous execution of Living-Off-The-Land binaries (`certutil.exe` -> `powershell.exe`).
 
-*Note: Known JIT engines and AV tools are safely whitelisted to a Risk Score of 10 to reduce CLI noise, while preserving visibility in the final JSON report.*
+## 🧪 Testing Suite
 
-## 🧪 Testing Suite (Master Revision Loop)
-
-Run the automated test suite using `pytest` to ensure all data schemas, intake hashing, and parsers function as expected:
+Run the automated test suite to ensure all internal modules and JSON schemas are functioning correctly:
 
 ```bash
 pytest tests/ -v
@@ -131,17 +132,6 @@ pytest tests/ -v
 ## Open-Source & Licensing
 
 This project is released under the **MIT License**.
-
-### Included Framework Code
-All core framework code (`src/`, `docs/`, `tests/`) is originally authored and fully open-source. All Python dependencies (`rich`, `prompt_toolkit`, etc.) are permissively licensed (MIT/BSD). For a complete software bill of materials, see [docs/SBOM.md](docs/SBOM.md). Third-party attribution can be found in `LICENSES/THIRD_PARTY_NOTICES.md`.
-
-### Required Dependencies
-The framework requires Python 3.9+ and the libraries listed in `requirements.txt`.
-
-### Optional External Tools
-This framework interfaces with external tools for advanced memory acquisition and analysis. **These are NOT bundled with the repository** and must be acquired separately:
-- **WinPMEM** (Memory Acquisition): Download from [Velocidex](https://github.com/Velocidex/WinPmem). Licensed under Apache 2.0 / GPL.
-- **Volatility 3** (Offline Memory Analysis): Download from [Volatility Foundation](https://github.com/volatilityfoundation/volatility3). Licensed under the Volatility Software License (VSL).
 
 ### Offline Operation
 The framework is designed to operate completely offline in air-gapped environments. The HTML/CSS dashboards are fully self-contained and require no external CDNs or online telemetry.
