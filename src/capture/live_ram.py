@@ -1,5 +1,5 @@
 """
-live_ram.py — Live RAM Capture Engine (Native-First + Optional Driver)
+live_ram.py - Live RAM Capture Engine (Native-First + Optional Driver)
 ======================================================================
 
 Primary mode is **native capture** (zero-binary, driverless):
@@ -15,26 +15,24 @@ If the user passes ``--driver`` flag, it *first* attempts a full
 physical RAM dump via winpmem.  This is disabled by default to avoid
 triggering Windows Security popups on hardened endpoints.
 
-All Win32 calls go through Python ``ctypes`` — no third-party
+All Win32 calls go through Python ``ctypes`` - no third-party
 drivers, no psutil.
 """
 
 from __future__ import annotations
 
 import ctypes
-import ctypes.wintypes as wintypes
 import json
 import os
 import subprocess
 import time
-from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskID
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich import box
 
 # ---------------------------------------------------------------------------
@@ -99,9 +97,9 @@ class LiveRAMCapturer:
         if not self.is_admin():
             console.print(
                 Panel(
-                    "[bold red]✖  Administrator privileges required[/bold red]\n\n"
+                    "[bold red][FAIL]  Administrator privileges required[/bold red]\n\n"
                     "Live RAM capture needs an elevated process.\n"
-                    "[dim]Right-click your terminal → 'Run as Administrator'[/dim]",
+                    "[dim]Right-click your terminal -> 'Run as Administrator'[/dim]",
                     title="Access Denied",
                     border_style="red",
                     box=box.HEAVY,
@@ -116,47 +114,47 @@ class LiveRAMCapturer:
             if result:
                 return result
             console.print(
-                "\n[bold yellow]⚡ Driver blocked — switching to "
-                "Native Capture Mode…[/bold yellow]\n"
+                "\n[bold yellow][*] Driver blocked - switching to "
+                "Native Capture Mode...[/bold yellow]\n"
             )
 
         # --- Primary: native forensic capture ---
         return self._native_forensic_capture()
 
     # ------------------------------------------------------------------
-    #  Strategy 1 — winpmem (only when --driver flag is set)
+    #  Strategy 1 - winpmem (only when --driver flag is set)
     # ------------------------------------------------------------------
 
     def _try_winpmem(self) -> Optional[str]:
         """Try winpmem.exe.  Returns dump path on success, None on failure."""
         if not os.path.exists(self.winpmem_path):
             console.print(
-                "[dim]winpmem.exe not found — skipping driver-based capture.[/dim]"
+                "[dim]winpmem.exe not found - skipping driver-based capture.[/dim]"
             )
             return None
 
         console.print(
             f"[bold blue]Loading kernel driver and capturing live RAM "
-            f"to {self.dump_path}…[/bold blue]"
+            f"to {self.dump_path}...[/bold blue]"
         )
         try:
             subprocess.run(
                 [self.winpmem_path, "-o", self.dump_path], check=True
             )
             console.print(
-                "[bold green]✔ Live Memory Snapshot Completed Successfully.[/bold green]"
+                "[bold green][PASS] Live Memory Snapshot Completed Successfully.[/bold green]"
             )
             return self.dump_path
 
         except subprocess.CalledProcessError as exc:
             console.print(
-                f"\n[bold red]✖ winpmem driver blocked "
+                f"\n[bold red][FAIL] winpmem driver blocked "
                 f"(exit code {exc.returncode})[/bold red]"
             )
             return None
 
     # ------------------------------------------------------------------
-    #  Strategy 2 — native forensic capture (default)
+    #  Strategy 2 - native forensic capture (default)
     # ------------------------------------------------------------------
 
     def _native_forensic_capture(self) -> Optional[str]:
@@ -180,7 +178,7 @@ class LiveRAMCapturer:
         console.print(
             Panel(
                 "[bold cyan]Forensic Memory Capture[/bold cyan]\n"
-                "[dim]Native Win32 API — no kernel driver required[/dim]\n\n"
+                "[dim]Native Win32 API - no kernel driver required[/dim]\n\n"
                 "[white]Phase 1:[/white] Scan all process memory regions\n"
                 "[white]Phase 2:[/white] Create MiniDumps of suspicious processes\n"
                 "[white]Phase 3:[/white] Package forensic evidence",
@@ -191,7 +189,7 @@ class LiveRAMCapturer:
         )
 
         # --- Phase 1: Scan ---
-        console.print("\n[bold white]━━━ Phase 1: Memory Scan ━━━[/bold white]\n")
+        console.print("\n[bold white]--- Phase 1: Memory Scan ---[/bold white]\n")
         analyzer = NativeLiveRAMAnalyzer(console=console)
         findings = analyzer.scan_live_ram()
 
@@ -203,11 +201,11 @@ class LiveRAMCapturer:
         scan_summary = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
         scan_summary.add_column("Label", style="white")
         scan_summary.add_column("Count", style="bold", justify="right")
-        scan_summary.add_row("🔴 Critical/High risk regions", f"[bold red]{high}[/bold red]")
-        scan_summary.add_row("🟡 Medium risk regions", f"[yellow]{med}[/yellow]")
-        scan_summary.add_row("⚪ Low/Benign (JIT, AV)", f"[dim]{low}[/dim]")
-        scan_summary.add_row("📊 Total flagged regions", f"[bold]{len(findings)}[/bold]")
-        scan_summary.add_row("🔍 Unique processes flagged", f"[bold]{len({f['pid'] for f in findings})}[/bold]")
+        scan_summary.add_row("[CRITICAL] Critical/High risk regions", f"[bold red]{high}[/bold red]")
+        scan_summary.add_row("[HIGH] Medium risk regions", f"[yellow]{med}[/yellow]")
+        scan_summary.add_row("[INFO] Low/Benign (JIT, AV)", f"[dim]{low}[/dim]")
+        scan_summary.add_row("[STATS] Total flagged regions", f"[bold]{len(findings)}[/bold]")
+        scan_summary.add_row("[INFO] Unique processes flagged", f"[bold]{len({f['pid'] for f in findings})}[/bold]")
         console.print(scan_summary)
 
         # Save the structured findings report
@@ -234,12 +232,12 @@ class LiveRAMCapturer:
             if f["risk_score"] >= 50
         }
 
-        console.print(f"\n[bold white]━━━ Phase 2: Process Memory Dumps ━━━[/bold white]\n")
+        console.print(f"\n[bold white]--- Phase 2: Process Memory Dumps ---[/bold white]\n")
 
         if suspicious_pids:
             console.print(
                 f"[bold blue]Acquiring memory dumps for "
-                f"{len(suspicious_pids)} suspicious process(es)…[/bold blue]\n"
+                f"{len(suspicious_pids)} suspicious process(es)...[/bold blue]\n"
             )
 
             success_count = 0
@@ -254,7 +252,7 @@ class LiveRAMCapturer:
                 console=console,
             ) as progress:
                 task = progress.add_task(
-                    "Dumping process memory…", total=len(suspicious_pids)
+                    "Dumping process memory...", total=len(suspicious_pids)
                 )
                 for pid, pname in suspicious_pids.items():
                     dump_file = os.path.join(dumps_dir, f"{pname}_pid{pid}.dmp")
@@ -304,11 +302,11 @@ class LiveRAMCapturer:
 
             for entry in dump_manifest:
                 if entry["status"] == "SUCCESS":
-                    status_text = Text("✔ Captured", style="bold green")
+                    status_text = Text("[PASS] Captured", style="bold green")
                     size_text = _human_size(entry["dump_size_bytes"])
                 else:
-                    status_text = Text("⊘ Denied", style="dim")
-                    size_text = "—"
+                    status_text = Text("[DENIED] Denied", style="dim")
+                    size_text = "-"
 
                 dump_table.add_row(
                     str(entry["pid"]),
@@ -325,7 +323,7 @@ class LiveRAMCapturer:
                 json.dump(dump_manifest, fp, indent=2)
 
             console.print(
-                f"\n[bold green]✔ Captured {success_count}/"
+                f"\n[bold green][PASS] Captured {success_count}/"
                 f"{len(suspicious_pids)} process dumps[/bold green]"
             )
             if fail_count:
@@ -335,12 +333,12 @@ class LiveRAMCapturer:
                 )
         else:
             console.print(
-                "[green]No high-risk processes found — "
+                "[green]No high-risk processes found - "
                 "skipping dump creation.[/green]"
             )
 
         # --- Phase 3: Package evidence ---
-        console.print(f"\n[bold white]━━━ Phase 3: Evidence Package ━━━[/bold white]\n")
+        console.print(f"\n[bold white]--- Phase 3: Evidence Package ---[/bold white]\n")
 
         # Calculate total capture size
         total_size = 0
@@ -350,16 +348,16 @@ class LiveRAMCapturer:
 
         summary = Text()
         summary.append("Forensic Capture Complete\n\n", style="bold green")
-        summary.append("  📁  Output directory : ", style="white")
+        summary.append("  [DIR]  Output directory : ", style="white")
         summary.append(f"{capture_dir}\n", style="underline cyan")
-        summary.append("  📋  Scan report      : ", style="white")
+        summary.append("  [REPORT]  Scan report      : ", style="white")
         summary.append(f"scan_results.json\n", style="dim cyan")
         if suspicious_pids:
-            summary.append("  💾  Process dumps    : ", style="white")
+            summary.append("  [CAPTURE]  Process dumps    : ", style="white")
             summary.append(f"process_dumps/  ({success_count} files)\n", style="dim cyan")
-            summary.append("  📄  Dump manifest    : ", style="white")
+            summary.append("  [FILE]  Dump manifest    : ", style="white")
             summary.append(f"dump_manifest.json\n", style="dim cyan")
-        summary.append("  📦  Total size       : ", style="white")
+        summary.append("  [PACKAGE]  Total size       : ", style="white")
         summary.append(f"{_human_size(total_size)}\n", style="bold white")
         summary.append("\n  [dim]Use /scan for a quick read-only inspection.[/dim]", style="dim")
 

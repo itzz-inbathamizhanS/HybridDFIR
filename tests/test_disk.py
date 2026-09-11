@@ -74,7 +74,50 @@ def test_extractor_all_artifacts(mock_filesystem):
     extractor = ArtifactExtractor(str(mock_filesystem))
     artifacts = extractor.extract_all_artifacts()
     
-    assert len(artifacts) == 2
+    # At minimum we should have SYSTEM registry + Prefetch
+    assert len(artifacts) >= 2
     types = [a["artifact_type"] for a in artifacts]
     assert "Registry Hive" in types
     assert "Prefetch File" in types
+
+
+def test_extractor_sam_registry(mock_filesystem):
+    """Test SAM hive extraction."""
+    # Create SAM hive
+    sam_hive = mock_filesystem / "Windows" / "System32" / "config" / "SAM"
+    sam_hive.write_text("dummy sam data")
+    
+    extractor = ArtifactExtractor(str(mock_filesystem))
+    artifacts = extractor.extract_sam_registry()
+    
+    assert len(artifacts) == 1
+    assert artifacts[0]["details"]["hive_type"] == "SAM"
+
+
+def test_extractor_software_registry(mock_filesystem):
+    """Test SOFTWARE hive extraction."""
+    software_hive = mock_filesystem / "Windows" / "System32" / "config" / "SOFTWARE"
+    software_hive.write_text("dummy software data")
+    
+    extractor = ArtifactExtractor(str(mock_filesystem))
+    artifacts = extractor.extract_software_registry()
+    
+    assert len(artifacts) == 1
+    assert artifacts[0]["details"]["hive_type"] == "SOFTWARE"
+
+
+def test_extractor_event_logs(mock_filesystem):
+    """Test Event Log extraction."""
+    evtx_dir = mock_filesystem / "Windows" / "System32" / "winevt" / "Logs"
+    evtx_dir.mkdir(parents=True)
+    (evtx_dir / "Security.evtx").write_text("dummy log data")
+    (evtx_dir / "System.evtx").write_text("dummy log data")
+    
+    extractor = ArtifactExtractor(str(mock_filesystem))
+    artifacts = extractor.extract_event_logs()
+    
+    assert len(artifacts) == 2
+    assert all(a["artifact_type"] == "Event Log" for a in artifacts)
+    log_names = [a["details"]["log_name"] for a in artifacts]
+    assert "Security.evtx" in log_names
+    assert "System.evtx" in log_names

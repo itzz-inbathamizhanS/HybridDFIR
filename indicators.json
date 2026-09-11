@@ -1,0 +1,16 @@
+{
+    "indicators":  [
+                       {
+                           "value":  "1.1.1.1",
+                           "type":  "ipv4-addr"
+                       },
+                       {
+                           "value":  "nc.exe",
+                           "type":  "file:name"
+                       },
+                       {
+                           "value":  "mimikatz.exe",
+                           "type":  "file:name"
+                       }
+                   ]
+}

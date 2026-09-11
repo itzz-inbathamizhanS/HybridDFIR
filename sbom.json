@@ -1,0 +1,48 @@
+{
+  "project": "Hybrid Forensics Framework",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "rich",
+      "version": "13.7.0",
+      "license": "MIT",
+      "status": "GREEN"
+    },
+    {
+      "name": "questionary",
+      "version": "2.0.1",
+      "license": "MIT",
+      "status": "GREEN"
+    },
+    {
+      "name": "prompt_toolkit",
+      "version": "3.0.43",
+      "license": "BSD-3-Clause",
+      "status": "GREEN"
+    },
+    {
+      "name": "pytest",
+      "version": "7.4.4",
+      "license": "MIT",
+      "status": "GREEN"
+    },
+    {
+      "name": "jsonschema",
+      "version": "4.21.1",
+      "license": "MIT",
+      "status": "GREEN"
+    }
+  ],
+  "external_tools": [
+    {
+      "name": "WinPMEM",
+      "license": "Apache-2.0 / GPL",
+      "status": "GREEN (External)"
+    },
+    {
+      "name": "Volatility 3",
+      "license": "VSL",
+      "status": "GREEN (External)"
+    }
+  ]
+}

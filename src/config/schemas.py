@@ -1,4 +1,4 @@
-from typing import TypedDict, Literal, Dict, Any, Union
+from typing import TypedDict, Literal
 
 class EvidenceHashes(TypedDict):
     md5: str

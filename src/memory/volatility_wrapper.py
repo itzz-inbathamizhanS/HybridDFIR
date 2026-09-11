@@ -1,6 +1,9 @@
 import os
 import json
+import logging
 import subprocess
+
+logger = logging.getLogger(__name__)
 
 class VolatilityWrapper:
     """
@@ -13,10 +16,10 @@ class VolatilityWrapper:
         if not os.path.exists(self.memory_image):
             raise FileNotFoundError(f"CRITICAL: Memory image not found at {self.memory_image}")
 
-    def run_plugin(self, plugin_name: str) -> list:
+    def run_plugin(self, plugin_name: str) -> dict:
         """
         Executes a Volatility 3 plugin and parses the JSON output.
-        Returns an empty list if Volatility is not installed or execution fails.
+        Returns structured status.
         """
         cmd = [
             self.vol_bin,
@@ -26,12 +29,22 @@ class VolatilityWrapper:
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return json.loads(result.stdout)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            if result.returncode != 0:
+                logger.error(f"Volatility plugin {plugin_name} failed: {result.stderr}")
+                return {"status": "ERROR", "data": [], "reason": "Volatility execution failed"}
+            
+            data = json.loads(result.stdout)
+            if not data:
+                return {"status": "PARTIAL", "data": [], "reason": "Volatility returned empty result"}
+            
+            return {"status": "SUCCESS", "data": data, "reason": "OK"}
+            
         except FileNotFoundError:
-            print(f"[!] Warning: Volatility executable '{self.vol_bin}' not found in system PATH.")
-            print("[!] Continuing pipeline with empty memory plugin output...")
-            return []
-        except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-            print(f"[!] Warning: Volatility failed or returned non-JSON output: {e}")
-            return []
+            return {"status": "NOT_AVAILABLE", "data": [], "reason": f"Volatility binary '{self.vol_bin}' not found"}
+        except subprocess.TimeoutExpired:
+            return {"status": "ERROR", "data": [], "reason": "Volatility plugin timed out"}
+        except json.JSONDecodeError as e:
+            return {"status": "ERROR", "data": [], "reason": "Failed to parse Volatility JSON output"}
+        except Exception as e:
+            return {"status": "ERROR", "data": [], "reason": f"Unexpected error: {str(e)}"}

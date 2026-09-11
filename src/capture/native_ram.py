@@ -1,12 +1,12 @@
 """
-native_ram.py — Zero-Binary Driverless Live RAM & Process Memory Inspector
+native_ram.py - Zero-Binary Driverless Live RAM & Process Memory Inspector
 ===========================================================================
 
 Phase 1 of the Hybrid Memory & Disk Forensics Framework.
 
 This module performs live process memory inspection on a running Windows system
 using ONLY native Win32 APIs accessed through Python's ``ctypes`` module.
-No third-party kernel drivers, no psutil — nothing that would trigger
+No third-party kernel drivers, no psutil - nothing that would trigger
 driver-blocklist alerts on hardened endpoints.
 
 Capabilities
@@ -40,7 +40,6 @@ import ctypes
 import ctypes.wintypes as wintypes
 import datetime
 import logging
-import sys
 from typing import List, Dict, Any, Optional, Tuple
 
 from rich.console import Console
@@ -83,10 +82,10 @@ PAGE_GUARD             = 0x100
 
 # --- Toolhelp32 ---
 TH32CS_SNAPPROCESS = 0x00000002
-INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value  # 0xFFFFFFFF… on 64-bit
+INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value  # 0xFFFFFFFF... on 64-bit
 
 # Heuristic thresholds
-_LARGE_REGION_THRESHOLD = 1 * 1024 * 1024  # 1 MiB — private RX above this is unusual
+_LARGE_REGION_THRESHOLD = 1 * 1024 * 1024  # 1 MiB - private RX above this is unusual
 
 # Human-readable lookup tables for console output
 _PROTECTION_NAMES: Dict[int, str] = {
@@ -109,7 +108,7 @@ _MEM_TYPE_NAMES: Dict[int, str] = {
 
 def _protection_str(protect: int) -> str:
     """Return a human-readable name for a page protection constant."""
-    base = protect & 0xFF  # strip modifier bits (GUARD, NOCACHE, …)
+    base = protect & 0xFF  # strip modifier bits (GUARD, NOCACHE, ...)
     name = _PROTECTION_NAMES.get(base, f"0x{protect:04X}")
     if protect & PAGE_GUARD:
         name += "|GUARD"
@@ -171,8 +170,8 @@ class NativeLiveRAMAnalyzer:
 
     # Protections that are *always* suspicious for committed private regions
     SUSPICIOUS_PROTECTIONS = frozenset({
-        PAGE_EXECUTE_READWRITE,   # 0x40 — classic shellcode
-        PAGE_EXECUTE_WRITECOPY,   # 0x80 — rare, often malicious
+        PAGE_EXECUTE_READWRITE,   # 0x40 - classic shellcode
+        PAGE_EXECUTE_WRITECOPY,   # 0x80 - rare, often malicious
     })
 
     # Protections that are *conditionally* suspicious
@@ -184,16 +183,30 @@ class NativeLiveRAMAnalyzer:
 
     # Known processes that legitimately allocate RWX memory for JIT compilation
     KNOWN_JIT_PROCESSES = frozenset({
-        "chrome.exe", "brave.exe", "msedge.exe", "msedgewebview2.exe", 
-        "node.exe", "Code.exe", "Antigravity IDE.exe", "powershell.exe", 
-        "pwsh.exe", "Creative Cloud UI Helper.exe",
-        "HPCommRecovery.exe", "HPSystemEventUtilityHost.exe"
+        "chrome.exe", "brave.exe", "msedge.exe", "msedgewebview2.exe",
+        "node.exe", "Code.exe", "Antigravity IDE.exe", "powershell.exe",
+        "pwsh.exe", "Creative Cloud UI Helper.exe", "python.exe",
+        "HPCommRecovery.exe", "HPSystemEventUtilityHost.exe",
+        "DSAService.exe", "DSAUpdateService.exe",
+        "ServiceShell.exe", "CrossDeviceService.exe",
     })
-    
+
+    # Prefixes for OEM processes that legitimately use RWX/.NET JIT memory
+    KNOWN_JIT_PREFIXES = (
+        "Dell.", "Intel", "Waves", "Lavasoft.", "DellOptimizer",
+        "DellEnterprise", "HP", "Lenovo", "Asus", "Acer",
+    )
+
     # Known security products that use copy-on-write executables
     KNOWN_AV_PROCESSES = frozenset({
-        "QHActiveDefense.exe", "QHSafeTray.exe", "MsMpEng.exe"
+        "QHActiveDefense.exe", "QHSafeTray.exe", "MsMpEng.exe",
     })
+
+    # Prefixes for AV/security products
+    KNOWN_AV_PREFIXES = (
+        "Lavasoft.", "Malwarebytes", "Norton", "McAfee", "Kaspersky",
+        "Avast", "AVG", "Bitdefender", "ESET", "Sophos",
+    )
 
     def __init__(self, console: Optional[Console] = None) -> None:
         self.console = console or Console()
@@ -224,10 +237,10 @@ class NativeLiveRAMAnalyzer:
 
         self.console.print(
             Panel(
-                "[bold red]✖  Administrator privileges required[/bold red]\n\n"
+                "[bold red][FAIL]  Administrator privileges required[/bold red]\n\n"
                 "Live RAM inspection needs an elevated process to open\n"
                 "handles to protected system processes.\n\n"
-                "[dim]Right-click your terminal → 'Run as Administrator'[/dim]",
+                "[dim]Right-click your terminal -> 'Run as Administrator'[/dim]",
                 title="Access Denied",
                 border_style="red",
                 box=box.HEAVY,
@@ -262,7 +275,7 @@ class NativeLiveRAMAnalyzer:
             pe.dwSize = ctypes.sizeof(PROCESSENTRY32)
 
             if not self._kernel32.Process32First(h_snap, ctypes.byref(pe)):
-                logger.warning("Process32First returned FALSE — snapshot may be empty")
+                logger.warning("Process32First returned FALSE - snapshot may be empty")
                 return processes
 
             while True:
@@ -276,7 +289,7 @@ class NativeLiveRAMAnalyzer:
                     processes.append((pid, name))
 
                 if not self._kernel32.Process32Next(h_snap, ctypes.byref(pe)):
-                    break  # ERROR_NO_MORE_FILES — enumeration complete
+                    break  # ERROR_NO_MORE_FILES - enumeration complete
         finally:
             self._kernel32.CloseHandle(h_snap)
 
@@ -321,7 +334,7 @@ class NativeLiveRAMAnalyzer:
             pid,
         )
         if not h_process:
-            # Access denied or process exited — silently skip
+            # Access denied or process exited - silently skip
             return findings
 
         try:
@@ -353,21 +366,29 @@ class NativeLiveRAMAnalyzer:
                     # --- Heuristic A: Always-suspicious protections ---
                     if protect in self.SUSPICIOUS_PROTECTIONS:
                         if protect == PAGE_EXECUTE_READWRITE:
-                            if process_name in self.KNOWN_JIT_PROCESSES and mem_type == MEM_PRIVATE:
+                            is_jit = (
+                                process_name in self.KNOWN_JIT_PROCESSES
+                                or any(process_name.startswith(p) for p in self.KNOWN_JIT_PREFIXES)
+                            )
+                            if is_jit and mem_type == MEM_PRIVATE:
                                 threat_label = "JIT_COMPILED_CODE"
                                 risk_score = 10
                             else:
                                 threat_label = "RWX_SHELLCODE_INJECTION"
                                 risk_score = 90
                         elif protect == PAGE_EXECUTE_WRITECOPY:
-                            if process_name in self.KNOWN_AV_PROCESSES and mem_type == MEM_IMAGE:
+                            is_av = (
+                                process_name in self.KNOWN_AV_PROCESSES
+                                or any(process_name.startswith(p) for p in self.KNOWN_AV_PREFIXES)
+                            )
+                            if is_av and mem_type == MEM_IMAGE:
                                 threat_label = "AV_COPY_ON_WRITE"
                                 risk_score = 10
                             else:
                                 threat_label = "RWX_WRITECOPY_SUSPICIOUS"
                                 risk_score = 80
 
-                    # --- Heuristic B: Conditional — large private RX ---
+                    # --- Heuristic B: Conditional - large private RX ---
                     elif (
                         protect in self.CONDITIONAL_PROTECTIONS
                         and mem_type == MEM_PRIVATE
@@ -444,36 +465,51 @@ class NativeLiveRAMAnalyzer:
 
         # ---- Enumerate processes ----
         with self.console.status(
-            "[bold blue]Enumerating processes via Toolhelp32 snapshot…",
+            "[bold blue]Enumerating processes via Toolhelp32 snapshot...",
             spinner="dots",
         ):
             processes = self.enumerate_processes()
 
         self.console.print(
-            f"[bold green]✔[/bold green] Discovered [cyan]{len(processes)}[/cyan] "
+            f"[bold green][PASS][/bold green] Discovered [cyan]{len(processes)}[/cyan] "
             f"active processes"
         )
 
         # ---- Walk every address space ----
         all_findings: List[Dict[str, Any]] = []
         scanned = 0
-        access_denied = 0
 
         with self.console.status(
-            "[bold blue]Scanning process memory regions for injection indicators…",
+            "[bold blue]Scanning process memory regions for injection indicators...",
             spinner="bouncingBar",
         ):
             for pid, name in processes:
                 hits = self._scan_process_memory(pid, name)
                 if hits:
                     all_findings.extend(hits)
+                else:
+                    # Append a clean placeholder so every process is tracked in 'Show All' mode
+                    all_findings.append({
+                        "pid": pid,
+                        "process_name": name,
+                        "base_address": "-",
+                        "region_size": 0,
+                        "region_size_human": "-",
+                        "protection": 0,
+                        "protection_name": "-",
+                        "mem_type": 0,
+                        "mem_type_name": "-",
+                        "threat_label": "CLEAN_PROCESS",
+                        "risk_score": 0,
+                        "scan_timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+                    })
                 scanned += 1
 
         # Count distinct PIDs that flagged
         flagged_pids = len({f["pid"] for f in all_findings})
 
         self.console.print(
-            f"[bold green]✔[/bold green] Scanned [cyan]{scanned}[/cyan] processes — "
+            f"[bold green][PASS][/bold green] Scanned [cyan]{scanned}[/cyan] processes - "
             f"[{'bold red' if flagged_pids else 'green'}]"
             f"{len(all_findings)} suspicious region(s) across {flagged_pids} process(es)"
             f"[/{'bold red' if flagged_pids else 'green'}]"
@@ -485,7 +521,7 @@ class NativeLiveRAMAnalyzer:
     #  5. Rich CLI Display
     # ------------------------------------------------------------------
 
-    def display_findings(self, findings: List[Dict[str, Any]]) -> None:
+    def display_findings(self, findings: List[Dict[str, Any]], critical_only: bool = False) -> None:
         """
         Render a rich console table of suspicious memory findings.
 
@@ -493,11 +529,13 @@ class NativeLiveRAMAnalyzer:
         ----------
         findings : list of dict
             Output from :meth:`scan_live_ram`.
+        critical_only : bool
+            If True, only displays findings with a risk score >= 50.
         """
         if not findings:
             self.console.print(
                 Panel(
-                    "[bold green]✔ No suspicious memory regions detected.[/bold green]\n"
+                    "[bold green][PASS] No suspicious memory regions detected.[/bold green]\n"
                     "[dim]All scanned processes appear clean.[/dim]",
                     title="Scan Result",
                     border_style="green",
@@ -507,13 +545,16 @@ class NativeLiveRAMAnalyzer:
             )
             return
 
-        # Filter out low risk from display
-        displayable_findings = [f for f in findings if f["risk_score"] >= 50]
+        # Filter based on user request
+        if critical_only:
+            displayable_findings = [f for f in findings if f["risk_score"] >= 50]
+        else:
+            displayable_findings = findings
 
         if displayable_findings:
             table = Table(
-                title="⚠  Suspicious Memory Regions Detected",
-                title_style="bold red",
+                title="[WARN]  Suspicious Memory Regions Detected" if critical_only else "[INFO] All Scanned Processes & Memory Regions",
+                title_style="bold red" if critical_only else "bold cyan",
                 box=box.SIMPLE,
                 show_lines=False,
                 header_style="bold magenta",
@@ -526,12 +567,14 @@ class NativeLiveRAMAnalyzer:
             table.add_column("Size", justify="right", style="white", width=12)
             table.add_column("Protection", style="bright_red", width=26)
             table.add_column("Type", style="dim", width=14)
-            table.add_column("Threat", style="bold red", width=28)
+            table.add_column("Threat", width=28)  # Removed default style to style per-row
             table.add_column("Risk", justify="center", style="bold", width=6)
 
             for f in sorted(displayable_findings, key=lambda x: x["risk_score"], reverse=True):
                 risk = f["risk_score"]
-                risk_style = "bold red" if risk >= 80 else ("yellow" if risk >= 60 else "white")
+                risk_style = "bold red" if risk >= 80 else ("yellow" if risk >= 60 else ("white" if risk > 0 else "dim green"))
+                threat_style = "bold red" if risk >= 50 else ("white" if risk > 0 else "dim green")
+                
                 table.add_row(
                     str(f["pid"]),
                     f["process_name"],
@@ -539,7 +582,7 @@ class NativeLiveRAMAnalyzer:
                     f["region_size_human"],
                     f["protection_name"],
                     f["mem_type_name"],
-                    f["threat_label"],
+                    Text(f["threat_label"], style=threat_style),
                     Text(str(risk), style=risk_style),
                 )
 
@@ -547,18 +590,25 @@ class NativeLiveRAMAnalyzer:
             self.console.print(table)
             self.console.print()
         else:
-            self.console.print("\n[bold green]✔ No high-risk memory regions detected.[/bold green]\n")
+            self.console.print("\n[bold green][PASS] No high-risk memory regions detected.[/bold green]\n")
 
         # Summary panel
         high = sum(1 for f in findings if f["risk_score"] >= 80)
         med  = sum(1 for f in findings if 60 <= f["risk_score"] < 80)
-        low  = sum(1 for f in findings if f["risk_score"] < 60)
+        low  = sum(1 for f in findings if 0 < f["risk_score"] < 60)
+        clean = sum(1 for f in findings if f["risk_score"] == 0)
 
         summary = Text()
         summary.append("Scan Summary\n\n", style="bold underline")
-        summary.append(f"  🔴  Critical / High  : {high}\n", style="bold red")
-        summary.append(f"  🟡  Medium           : {med}\n", style="yellow")
-        summary.append(f"  ⚪  Low (JIT/Benign) : {low} (Suppressed from UI)\n", style="dim")
+        summary.append(f"  [CRITICAL]  Critical / High  : {high}\n", style="bold red")
+        summary.append(f"  [HIGH]  Medium           : {med}\n", style="yellow")
+        
+        if critical_only:
+            summary.append(f"  [INFO]  Low (JIT/AV)     : {low} (Suppressed from UI)\n", style="dim")
+            summary.append(f"  [OK]  Clean Processes  : {clean} (Suppressed from UI)\n", style="dim green")
+        else:
+            summary.append(f"  [INFO]  Low (JIT/AV)     : {low}\n", style="dim white")
+            summary.append(f"  [OK]  Clean Processes  : {clean}\n", style="dim green")
         summary.append(
             f"\n  Total flagged regions: {len(findings)}  |  "
             f"Unique PIDs: {len({f['pid'] for f in findings})}",
@@ -627,7 +677,7 @@ def _human_size(nbytes: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-#  Standalone entry point — run the scanner directly for triage
+#  Standalone entry point - run the scanner directly for triage
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -636,7 +686,7 @@ if __name__ == "__main__":
 
     analyzer = NativeLiveRAMAnalyzer(console=console)
     findings = analyzer.scan_live_ram()
-    analyzer.display_findings(findings)
+    analyzer.display_findings(findings, critical_only=False)
 
     # Also emit correlated events for pipeline integration verification
     events = analyzer.findings_to_correlated_events(findings)

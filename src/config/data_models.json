@@ -1,58 +1,178 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ForensicFrameworkDataModels",
-  "definitions": {
-    "EvidenceMetadata": {
-      "type": "object",
-      "required": ["evidence_id", "file_name", "file_path", "image_type", "size_bytes", "hashes", "intake_timestamp_utc"],
-      "properties": {
-        "evidence_id": { "type": "string" },
-        "file_name": { "type": "string" },
-        "file_path": { "type": "string" },
-        "image_type": { "type": "string", "enum": ["disk", "memory"] },
-        "size_bytes": { "type": "integer" },
-        "hashes": {
-          "type": "object",
-          "required": ["md5", "sha256"],
-          "properties": {
-            "md5": { "type": "string" },
-            "sha256": { "type": "string" }
-          }
-        },
-        "intake_timestamp_utc": { "type": "string", "format": "date-time" }
+  "EvidenceMetadata": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["evidence_id", "file_name", "file_path", "image_type", "size_bytes", "hashes", "intake_timestamp_utc"],
+    "properties": {
+      "evidence_id": { "type": "string" },
+      "file_name": { "type": "string" },
+      "file_path": { "type": "string" },
+      "image_type": { "type": "string", "enum": ["disk", "memory", "hybrid"] },
+      "size_bytes": { "type": "integer" },
+      "hashes": {
+        "type": "object",
+        "required": ["md5", "sha256"],
+        "properties": {
+          "md5": { "type": "string" },
+          "sha256": { "type": "string" }
+        }
+      },
+      "intake_timestamp_utc": { "type": "string", "format": "date-time" }
+    }
+  },
+  "Case": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["case_id", "case_name", "creation_time", "analyst", "case_status"],
+    "properties": {
+      "case_id": { "type": "string" },
+      "case_name": { "type": "string" },
+      "case_description": { "type": "string" },
+      "creation_time": { "type": "string", "format": "date-time" },
+      "analyst": { "type": "string" },
+      "organization": { "type": "string" },
+      "classification_label": { "type": "string" },
+      "case_status": { "type": "string", "enum": ["NEW", "TRIAGE", "INVESTIGATION", "REVIEW", "CONFIRMED", "DISMISSED", "CLOSED", "ARCHIVED"] },
+      "priority": { "type": "string" },
+      "investigation_start": { "type": "string", "format": "date-time" },
+      "investigation_end": { "type": "string", "format": "date-time" },
+      "timezone": { "type": "string" },
+      "evidence_items": { "type": "array", "items": { "type": "string" } },
+      "findings": { "type": "array", "items": { "type": "string" } },
+      "indicators": { "type": "array", "items": { "type": "string" } },
+      "entities": { "type": "array", "items": { "type": "string" } },
+      "relationships": { "type": "array", "items": { "type": "string" } },
+      "analyst_notes": { "type": "array", "items": { "type": "string" } }
+    }
+  },
+  "EvidenceItem": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["evidence_id", "case_id", "evidence_type", "original_filename", "ingestion_time", "SHA-256", "validation_status"],
+    "properties": {
+      "evidence_id": { "type": "string" },
+      "case_id": { "type": "string" },
+      "evidence_type": { "type": "string" },
+      "original_filename": { "type": "string" },
+      "source_description": { "type": "string" },
+      "acquisition_time": { "type": "string", "format": "date-time" },
+      "ingestion_time": { "type": "string", "format": "date-time" },
+      "timezone": { "type": "string" },
+      "file_size": { "type": "integer" },
+      "SHA-256": { "type": "string" },
+      "additional_hashes": { "type": "object" },
+      "source_metadata": { "type": "object" },
+      "acquisition_method": { "type": "string" },
+      "tool_name": { "type": "string" },
+      "tool_version": { "type": "string" },
+      "examiner": { "type": "string" },
+      "provenance": { "type": "string" },
+      "validation_status": { "type": "string", "enum": ["VALID", "MODIFIED", "MISSING", "UNVERIFIABLE", "PENDING"] }
+    }
+  },
+  "AuditRecord": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["timestamp", "actor", "action", "object"],
+    "properties": {
+      "timestamp": { "type": "string", "format": "date-time" },
+      "actor": { "type": "string" },
+      "action": { "type": "string" },
+      "object": { "type": "string" },
+      "reason": { "type": "string" },
+      "previous_state": { "type": "object" },
+      "resulting_state": { "type": "object" }
+    }
+  },
+  "Entity": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["entity_id", "entity_type", "properties"],
+    "properties": {
+      "entity_id": { "type": "string" },
+      "entity_type": { "type": "string", "enum": ["CASE", "EVIDENCE", "HOST", "USER", "PROCESS", "FILE", "HASH", "DLL", "NETWORK_CONNECTION", "IP", "DOMAIN", "DNS_EVENT", "REGISTRY_KEY", "SERVICE", "SCHEDULED_TASK", "PERSISTENCE_ITEM", "EVENT_LOG", "MEMORY_REGION", "MEMORY_ARTIFACT", "TIMELINE_EVENT", "FINDING"] },
+      "properties": { "type": "object" }
+    }
+  },
+  "Relationship": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["source_entity", "target_entity", "relationship_type", "provenance"],
+    "properties": {
+      "source_entity": { "type": "string" },
+      "target_entity": { "type": "string" },
+      "relationship_type": { "type": "string" },
+      "provenance": { 
+        "type": "object",
+        "required": ["source", "confidence", "classification"],
+        "properties": {
+          "source": { "type": "string" },
+          "evidence_id": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "classification": { "type": "string", "enum": ["OBSERVED", "INFERRED", "CORRELATED", "ANALYST_CONFIRMED"] }
+        }
       }
-    },
-    "DiskArtifact": {
-      "type": "object",
-      "required": ["artifact_type", "source_path", "timestamp", "details"],
-      "properties": {
-        "artifact_type": { "type": "string" },
-        "source_path": { "type": "string" },
-        "timestamp": { "type": "string" },
-        "details": { "type": "object" }
-      }
-    },
-    "MemoryProcess": {
-      "type": "object",
-      "required": ["pid", "ppid", "process_name", "path"],
-      "properties": {
-        "pid": { "type": "integer" },
-        "ppid": { "type": "integer" },
-        "process_name": { "type": "string" },
-        "path": { "type": "string" },
-        "handles_count": { "type": "integer" }
-      }
-    },
-    "CorrelatedEvent": {
-      "type": "object",
-      "required": ["timestamp", "source_module", "event_type", "description", "risk_score"],
-      "properties": {
-        "timestamp": { "type": "string" },
-        "source_module": { "type": "string", "enum": ["disk", "memory", "intake"] },
-        "event_type": { "type": "string" },
-        "description": { "type": "string" },
-        "risk_score": { "type": "integer", "minimum": 0, "maximum": 100 }
-      }
+    }
+  },
+  "Finding": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["finding_id", "case_id", "title", "severity", "status", "created_at"],
+    "properties": {
+      "finding_id": { "type": "string" },
+      "case_id": { "type": "string" },
+      "title": { "type": "string" },
+      "severity": { "type": "string" },
+      "risk_score": { "type": "integer" },
+      "confidence": { "type": "number" },
+      "status": { "type": "string", "enum": ["OPEN", "UNDER_REVIEW", "CONFIRMED", "FALSE_POSITIVE", "INCONCLUSIVE", "CLOSED"] },
+      "description": { "type": "string" },
+      "observations": { "type": "array", "items": { "type": "string" } },
+      "evidence_refs": { "type": "array", "items": { "type": "string" } },
+      "related_entities": { "type": "array", "items": { "type": "string" } },
+      "correlation_rule": { "type": "string" },
+      "mitre_reference": { "type": "string" },
+      "analyst_assessment": { "type": "string" },
+      "analyst_notes": { "type": "array", "items": { "type": "string" } },
+      "created_at": { "type": "string", "format": "date-time" },
+      "updated_at": { "type": "string", "format": "date-time" },
+      "created_by": { "type": "string" }
+    }
+  },
+  "DiskArtifact": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["artifact_type", "source_path", "timestamp", "details"],
+    "properties": {
+      "artifact_type": { "type": "string" },
+      "source_path": { "type": "string" },
+      "timestamp": { "type": "string" },
+      "details": { "type": "object" }
+    }
+  },
+  "MemoryProcess": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["pid", "ppid", "process_name", "path"],
+    "properties": {
+      "pid": { "type": "integer" },
+      "ppid": { "type": "integer" },
+      "process_name": { "type": "string" },
+      "path": { "type": "string" },
+      "handles_count": { "type": "integer" }
+    }
+  },
+  "CorrelatedEvent": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["timestamp", "source_module", "event_type", "description", "risk_score"],
+    "properties": {
+      "timestamp": { "type": "string" },
+      "source_module": { "type": "string", "enum": ["disk", "memory", "intake"] },
+      "event_type": { "type": "string" },
+      "description": { "type": "string" },
+      "risk_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+      "mitre_attack_ttps": { "type": "array", "items": { "type": "string" } }
     }
   }
 }
