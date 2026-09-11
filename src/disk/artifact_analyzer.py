@@ -1,5 +1,4 @@
-import os
-import datetime
+
 from typing import List, Dict, Any, Optional
 from rich.console import Console
 from rich.panel import Panel
@@ -106,10 +105,10 @@ class ArtifactAnalyzer:
         table = Table(title="[bold red]Artifact Anomalies Detected[/bold red]", box=box.SIMPLE_HEAD)
         table.add_column("Type", style="cyan")
         table.add_column("Threat Label", style="bold red")
-        table.add_column("Description", style="white")
         table.add_column("Risk", justify="center", style="bold yellow")
+        table.add_column("Description", style="white")
         
         for f in findings:
-            table.add_row(f["artifact_type"], f["threat_label"], f["description"], str(f["risk_score"]))
+            table.add_row(f["artifact_type"], f["threat_label"], str(f["risk_score"]), f["description"])
             
         self.console.print(table)

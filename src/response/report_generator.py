@@ -21,7 +21,7 @@ class ReportGenerator:
 
     def generate_json_report(self, case_data: dict) -> str:
         """Saves the full Case Object as a structured CASE_EXPORT JSON file."""
-        timestamp = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
         json_path = self.report_dir / f"CASE_EXPORT_{timestamp}.json"
         
         # Load the audit log if available

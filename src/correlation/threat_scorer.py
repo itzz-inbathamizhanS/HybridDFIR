@@ -212,7 +212,7 @@ class ThreatScorer:
                 # Event logs are always worth noting
                 risk_score += 10
                 threat_descriptions.append(
-                    f"Windows Event Log artifact detected"
+                    "Windows Event Log artifact detected"
                 )
 
             # ===================================================
@@ -307,7 +307,7 @@ class ThreatScorer:
                 cross_threats.append({
                     "finding_id": finding_id,
                     "timestamp": mem_proc.get("scan_timestamp_utc",
-                                              datetime.datetime.utcnow().isoformat() + "Z"),
+                                              datetime.datetime.now(datetime.UTC).isoformat() + "Z"),
                     "source_module": "memory",
                     "event_type": "CROSS_MODULE_THREAT",
                     "description": (
@@ -333,7 +333,7 @@ class ThreatScorer:
             finding_id = f"FND-{uuid.uuid4().hex[:8].upper()}"
             cross_threats.append({
                 "finding_id": finding_id,
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
                 "source_module": "memory",
                 "event_type": "CROSS_MODULE_THREAT",
                 "description": (
@@ -361,7 +361,7 @@ class ThreatScorer:
                 cross_threats.append({
                     "finding_id": finding_id,
                     "timestamp": dll_proc.get("scan_timestamp_utc",
-                                              datetime.datetime.utcnow().isoformat() + "Z"),
+                                              datetime.datetime.now(datetime.UTC).isoformat() + "Z"),
                     "source_module": "memory",
                     "event_type": "CROSS_MODULE_THREAT",
                     "description": (
@@ -392,7 +392,7 @@ class ThreatScorer:
             finding_id = f"FND-{uuid.uuid4().hex[:8].upper()}"
             cross_threats.append({
                 "finding_id": finding_id,
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
                 "source_module": "memory",
                 "event_type": "CROSS_MODULE_THREAT",
                 "description": (
@@ -421,7 +421,7 @@ class ThreatScorer:
             active_lolbins_names = {f.get("process_name", "").lower() for f in active_lolbin_findings}
             cross_threats.append({
                 "finding_id": finding_id,
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
                 "source_module": "memory",
                 "event_type": "CROSS_MODULE_THREAT",
                 "description": (

@@ -44,7 +44,7 @@ class VolatilityWrapper:
             return {"status": "NOT_AVAILABLE", "data": [], "reason": f"Volatility binary '{self.vol_bin}' not found"}
         except subprocess.TimeoutExpired:
             return {"status": "ERROR", "data": [], "reason": "Volatility plugin timed out"}
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             return {"status": "ERROR", "data": [], "reason": "Failed to parse Volatility JSON output"}
         except Exception as e:
             return {"status": "ERROR", "data": [], "reason": f"Unexpected error: {str(e)}"}

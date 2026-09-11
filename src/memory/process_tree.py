@@ -6,8 +6,6 @@ from rich.tree import Tree
 from rich.text import Text
 from rich.panel import Panel
 from rich import box
-import datetime
-
 # --- Toolhelp32 Constants ---
 TH32CS_SNAPPROCESS = 0x00000002
 INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value

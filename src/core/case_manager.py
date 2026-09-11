@@ -1,8 +1,6 @@
 import json
 import uuid
 import datetime
-import os
-from pathlib import Path
 from src.config.settings import OUTPUT_DIR
 
 class CaseManager:
@@ -15,7 +13,7 @@ class CaseManager:
             self.load_case()
 
     def create_case(self, case_name: str, analyst: str, description: str = "", organization: str = "", classification: str = "UNCLASSIFIED", priority: str = "NORMAL") -> str:
-        self.case_id = f"CASE-{datetime.datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+        self.case_id = f"CASE-{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
         self.case_dir = OUTPUT_DIR / self.case_id
         self.case_dir.mkdir(parents=True, exist_ok=True)
         
@@ -23,13 +21,13 @@ class CaseManager:
             "case_id": self.case_id,
             "case_name": case_name,
             "case_description": description,
-            "creation_time": datetime.datetime.utcnow().isoformat() + "Z",
+            "creation_time": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
             "analyst": analyst,
             "organization": organization,
             "classification_label": classification,
             "case_status": "NEW",
             "priority": priority,
-            "investigation_start": datetime.datetime.utcnow().isoformat() + "Z",
+            "investigation_start": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
             "investigation_end": None,
             "timezone": "UTC",
             "evidence_items": [],
@@ -64,7 +62,7 @@ class CaseManager:
             raise ValueError(f"Invalid status: {new_status}")
         self.case_data["case_status"] = new_status
         if new_status in ["CLOSED", "ARCHIVED"]:
-            self.case_data["investigation_end"] = datetime.datetime.utcnow().isoformat() + "Z"
+            self.case_data["investigation_end"] = datetime.datetime.now(datetime.UTC).isoformat() + "Z"
         self.save_case()
 
     def add_evidence(self, evidence_id: str):
@@ -87,7 +85,7 @@ class CaseManager:
             "target_id": target_id,
             "relationship_type": relationship_type,
             "confidence": confidence,
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z"
         }
         self.case_data["relationships"].append(relationship)
         self.save_case()

@@ -360,7 +360,7 @@ class PersistenceHunter:
             "is_active": is_active,
             "executable": exe_name,
             "mitre_ttps": list(dict.fromkeys(mitre_ttps)),
-            "scan_timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+            "scan_timestamp_utc": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
         }
 
     # ------------------------------------------------------------------
@@ -490,8 +490,8 @@ class PersistenceHunter:
         table.add_column("Name", style="white", width=24)
         table.add_column("Value", style="bright_yellow", width=40, overflow="ellipsis")
         table.add_column("Status", width=10)
-        table.add_column("Threat", width=22)
         table.add_column("Risk", justify="center", style="bold", width=6)
+        table.add_column("Threat", width=22)
 
         for f in sorted(displayable, key=lambda x: x["risk_score"], reverse=True):
             risk = f["risk_score"]
@@ -510,8 +510,8 @@ class PersistenceHunter:
                 f["name"],
                 f["value"][:60] + ("..." if len(f["value"]) > 60 else ""),
                 status,
-                Text(threat_text, style=threat_style),
                 Text(str(risk), style=risk_style),
+                Text(threat_text, style=threat_style),
             )
 
         self.console.print()

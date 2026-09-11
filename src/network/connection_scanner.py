@@ -375,7 +375,7 @@ class NetworkConnectionScanner:
             "threat_labels": threat_labels,
             "risk_score": min(risk_score, 100),
             "mitre_ttps": list(dict.fromkeys(mitre_ttps)),
-            "scan_timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+            "scan_timestamp_utc": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
         }
 
     # ------------------------------------------------------------------
@@ -472,8 +472,8 @@ class NetworkConnectionScanner:
         table.add_column("Local Address", style="bright_yellow", width=22)
         table.add_column("Remote Address", style="bright_yellow", width=22)
         table.add_column("State", style="dim", width=13)
-        table.add_column("Threat", width=28)
         table.add_column("Risk", justify="center", style="bold", width=6)
+        table.add_column("Threat", width=28)
 
         for f in sorted(displayable, key=lambda x: x["risk_score"], reverse=True):
             risk = f["risk_score"]
@@ -492,8 +492,8 @@ class NetworkConnectionScanner:
                 f["local_addr"],
                 f["remote_addr"],
                 f["state"],
-                Text(threat_text, style=threat_style),
                 Text(str(risk), style=risk_style),
+                Text(threat_text, style=threat_style),
             )
 
         self.console.print()

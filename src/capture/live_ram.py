@@ -32,7 +32,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich import box
 
 # ---------------------------------------------------------------------------
@@ -232,7 +232,7 @@ class LiveRAMCapturer:
             if f["risk_score"] >= 50
         }
 
-        console.print(f"\n[bold white]--- Phase 2: Process Memory Dumps ---[/bold white]\n")
+        console.print("\n[bold white]--- Phase 2: Process Memory Dumps ---[/bold white]\n")
 
         if suspicious_pids:
             console.print(
@@ -338,7 +338,7 @@ class LiveRAMCapturer:
             )
 
         # --- Phase 3: Package evidence ---
-        console.print(f"\n[bold white]--- Phase 3: Evidence Package ---[/bold white]\n")
+        console.print("\n[bold white]--- Phase 3: Evidence Package ---[/bold white]\n")
 
         # Calculate total capture size
         total_size = 0
@@ -351,12 +351,12 @@ class LiveRAMCapturer:
         summary.append("  [DIR]  Output directory : ", style="white")
         summary.append(f"{capture_dir}\n", style="underline cyan")
         summary.append("  [REPORT]  Scan report      : ", style="white")
-        summary.append(f"scan_results.json\n", style="dim cyan")
+        summary.append("scan_results.json\n", style="dim cyan")
         if suspicious_pids:
             summary.append("  [CAPTURE]  Process dumps    : ", style="white")
             summary.append(f"process_dumps/  ({success_count} files)\n", style="dim cyan")
             summary.append("  [FILE]  Dump manifest    : ", style="white")
-            summary.append(f"dump_manifest.json\n", style="dim cyan")
+            summary.append("dump_manifest.json\n", style="dim cyan")
         summary.append("  [PACKAGE]  Total size       : ", style="white")
         summary.append(f"{_human_size(total_size)}\n", style="bold white")
         summary.append("\n  [dim]Use /scan for a quick read-only inspection.[/dim]", style="dim")

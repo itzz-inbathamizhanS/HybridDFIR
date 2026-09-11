@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from src.config.settings import OUTPUT_DIR
 
 class EvidenceGraph:

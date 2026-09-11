@@ -29,7 +29,7 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 
-from src.core import CaseManager, AuditLog, EvidenceGraph
+from src.core import CaseManager, AuditLog
 from src.intake import EvidenceIntake
 from src.disk import ArtifactExtractor
 from src.disk.artifact_analyzer import ArtifactAnalyzer
@@ -65,7 +65,7 @@ def display_banner():
 #  Unified Dashboard - the "one command to rule them all"
 # ----------------------------------------------
 
-import datetime
+
 def run_unified_dashboard(case_id: str, critical_only: bool = False):
     """
     Runs ALL 4 scanning engines and produces a unified threat assessment.
@@ -106,6 +106,8 @@ def run_unified_dashboard(case_id: str, critical_only: bool = False):
     network_findings = []
     persistence_findings = []
     dll_findings = []
+    tree_findings = []
+    ioc_findings = []
 
     # -- Module 1: Memory Scan --
     console.print("\n[bold white]=== Module 1: Live Memory Inspection ===[/bold white]\n")
@@ -273,9 +275,9 @@ def run_unified_dashboard(case_id: str, critical_only: bool = False):
 
     summary = Text()
     summary.append("UNIFIED THREAT ASSESSMENT\n\n", style="bold underline white")
-    summary.append(f"  System Threat Score  : ", style="white")
+    summary.append("  System Threat Score  : ", style="white")
     summary.append(f"{unified_score}/100\n", style=health_style)
-    summary.append(f"  System Status        : ", style="white")
+    summary.append("  System Status        : ", style="white")
     summary.append(f"{health_label}\n\n", style=health_style)
     summary.append(f"  [CRITICAL]  Critical Events   : {critical}\n", style="bold red")
     summary.append(f"  [HIGH]  Medium Events     : {medium}\n", style="yellow")
@@ -295,8 +297,6 @@ def run_unified_dashboard(case_id: str, critical_only: bool = False):
 
     # -- Save unified report --
     try:
-        timestamp = int(time.time())
-        report_path = OUTPUT_DIR / f"unified_dashboard_{timestamp}.json"
         finding_id = f"FND-DASHBOARD-{int(time.time())}"
         report_data = {
             "scan_type": "unified_dashboard",
@@ -320,7 +320,7 @@ def run_unified_dashboard(case_id: str, critical_only: bool = False):
         
         finding = {
             "finding_id": finding_id,
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
             "source_module": "UnifiedDashboard",
             "event_type": "Multi-Module Threat Assessment",
             "description": f"Unified scan completed with Threat Score: {unified_score}/100",
@@ -357,7 +357,11 @@ def run_pipeline(image_path: str, image_type: str, mount_point: str = None):
         intake_type = "memory" if image_type == "hybrid" else image_type
         with console.status("[bold blue]Ingesting evidence & calculating hashes...", spinner="dots"):
             intake = EvidenceIntake(image_path, intake_type)
-            intake_metadata = intake.process_evidence()
+            intake_result = intake.process_evidence()
+        
+        if intake_result.get("status") != "SUCCESS":
+            raise ValueError(intake_result.get("reason", "Unknown intake error"))
+        intake_metadata = intake_result.get("metadata", {})
         
         console.print("[bold green][+] Evidence Intake Complete[/bold green]")
         
@@ -369,12 +373,14 @@ def run_pipeline(image_path: str, image_type: str, mount_point: str = None):
         evidence_id = str(intake_metadata.get("evidence_id", "N/A"))
         table.add_row("Evidence ID", evidence_id)
 
-        file_size_bytes = intake_metadata.get("size_bytes", 0)
+        # Support both new schema (file_size) and old schema (size_bytes)
+        file_size_bytes = intake_metadata.get("size_bytes", intake_metadata.get("file_size", 0))
         file_size = round(file_size_bytes / (1024**3), 2)
         table.add_row("File Size", f"{file_size} GB")
 
+        # Support both new schema (SHA-256 + additional_hashes) and old schema (hashes dict)
         hashes = intake_metadata.get("hashes", {})
-        sha256 = str(hashes.get("sha256", "N/A"))
+        sha256 = str(hashes.get("sha256", intake_metadata.get("SHA-256", "N/A")))
         table.add_row("SHA-256", sha256[:32] + "..." if len(sha256) > 32 else sha256)
 
         console.print(table)
@@ -398,7 +404,8 @@ def run_pipeline(image_path: str, image_type: str, mount_point: str = None):
         if image_type in ["memory", "hybrid"]:
             with console.status("[bold blue]Executing Volatility 3 plugins...", spinner="bouncingBar"):
                 scanner = ProcessScanner(image_path)
-                memory_processes = scanner.extract_running_processes()
+                scan_result = scanner.extract_running_processes()
+                memory_processes = scan_result.get("processes", []) if isinstance(scan_result, dict) else scan_result
             console.print(f"[bold green][+] Memory Analysis:[/bold green] Extracted {len(memory_processes)} processes")
     except Exception as e:
         console.print(f"[bold yellow][WARN] Memory Analysis Warning:[/bold yellow] {e}")
@@ -419,7 +426,7 @@ def run_pipeline(image_path: str, image_type: str, mount_point: str = None):
         with console.status("[bold blue]Building timeline & scoring threat heuristics...", spinner="material"):
             builder = TimelineBuilder()
             builder.ingest_disk_artifacts(disk_artifacts)
-            builder.ingest_memory_processes(memory_processes, intake_metadata.get("intake_timestamp_utc", "UNKNOWN"))
+            builder.ingest_memory_processes(memory_processes, intake_metadata.get("intake_timestamp_utc", intake_metadata.get("ingestion_time", "UNKNOWN")))
             timeline = builder.build_timeline()
             
             scorer = ThreatScorer()
@@ -594,13 +601,11 @@ def run_doctor():
         table.add_row("Administrator", "[red]FAIL[/red]")
         
     try:
-        import rich
         table.add_row("rich module", "[green]PASS[/green]")
     except:
         table.add_row("rich module", "[red]FAIL[/red]")
         
     try:
-        import prompt_toolkit
         table.add_row("prompt_toolkit", "[green]PASS[/green]")
     except:
         table.add_row("prompt_toolkit", "[red]FAIL[/red]")
@@ -621,7 +626,7 @@ def run_self_test():
     try:
         import datetime
         test_data_disk = [{
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
             "source_module": "disk",
             "event_type": "Registry Hive",
             "description": "Found at: C:\\Windows\\System32\\config\\SYSTEM_TEST_DATA",
@@ -634,7 +639,7 @@ def run_self_test():
         }]
 
         test_data_mem = [{
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
             "source_module": "memory",
             "event_type": "Active Process",
             "description": "Process TEST_DATA.exe (PID: 9999) running in memory.",
@@ -652,7 +657,7 @@ def run_self_test():
         timeline = tb.build_timeline()
 
         scorer = ThreatScorer()
-        threats = scorer.evaluate_timeline(timeline)
+        scorer.evaluate_timeline(timeline)
 
         manager = CaseManager()
         case_id = manager.create_case("Self-Test Execution", "System", "Automated framework validation")
@@ -763,7 +768,10 @@ def interactive_repl():
         # -- Unified Dashboard --
         elif cmd == "/dashboard":
             critical_only = "--critical" in parts
-            run_unified_dashboard(critical_only=critical_only)
+            manager = CaseManager(None)
+            adhoc_case_id = manager.create_case("Interactive Dashboard", "Local Analyst")
+            console.print(f"[bold green][+] Created Temporary Case for Dashboard: {adhoc_case_id}[/bold green]")
+            run_unified_dashboard(case_id=adhoc_case_id, critical_only=critical_only)
 
         # -- Memory Scan --
         elif cmd == "/scan":

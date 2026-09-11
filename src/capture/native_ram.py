@@ -419,7 +419,7 @@ class NativeLiveRAMAnalyzer:
                             "mem_type_name": _mem_type_str(mem_type),
                             "threat_label": threat_label,
                             "risk_score": risk_score,
-                            "scan_timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+                            "scan_timestamp_utc": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
                         })
 
                 # Advance to the next region
@@ -501,7 +501,7 @@ class NativeLiveRAMAnalyzer:
                         "mem_type_name": "-",
                         "threat_label": "CLEAN_PROCESS",
                         "risk_score": 0,
-                        "scan_timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+                        "scan_timestamp_utc": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
                     })
                 scanned += 1
 
@@ -567,8 +567,8 @@ class NativeLiveRAMAnalyzer:
             table.add_column("Size", justify="right", style="white", width=12)
             table.add_column("Protection", style="bright_red", width=26)
             table.add_column("Type", style="dim", width=14)
-            table.add_column("Threat", width=28)  # Removed default style to style per-row
             table.add_column("Risk", justify="center", style="bold", width=6)
+            table.add_column("Threat", width=28)  # Removed default style to style per-row
 
             for f in sorted(displayable_findings, key=lambda x: x["risk_score"], reverse=True):
                 risk = f["risk_score"]
@@ -582,8 +582,8 @@ class NativeLiveRAMAnalyzer:
                     f["region_size_human"],
                     f["protection_name"],
                     f["mem_type_name"],
-                    Text(f["threat_label"], style=threat_style),
                     Text(str(risk), style=risk_style),
+                    Text(f["threat_label"], style=threat_style),
                 )
 
             self.console.print()
@@ -649,7 +649,7 @@ class NativeLiveRAMAnalyzer:
             risk = min(f["risk_score"], 100)
             event_type = "THREAT_DETECTED" if risk >= 50 else "INFO_BENIGN_ALLOCATION"
             events.append({
-                "timestamp": f.get("scan_timestamp_utc", datetime.datetime.utcnow().isoformat() + "Z"),
+                "timestamp": f.get("scan_timestamp_utc", datetime.datetime.now(datetime.UTC).isoformat() + "Z"),
                 "source_module": "memory",
                 "event_type": event_type,
                 "description": (

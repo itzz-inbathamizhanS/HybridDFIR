@@ -10,7 +10,7 @@ Built entirely around a **100% Native Python & Win32 API (`ctypes`) architecture
 
 ---
 
-## 🌟 Core Features & Capabilities
+## Core Features & Capabilities
 
 * **Zero-Binary Live Memory Inspection**: Scans live RAM for fileless malware, reflective DLL injection, and process hollowing using native Windows APIs (VirtualQueryEx, Toolhelp32Snapshot).
 * **Process Lineage Mapping**: Builds parent-child process trees to identify masquerading and suspicious execution chains.
@@ -23,7 +23,39 @@ Built entirely around a **100% Native Python & Win32 API (`ctypes`) architecture
 
 ---
 
-## 📂 System Architecture
+## Documentation
+
+New to the project or looking to understand the core concepts? Start here:
+
+### Core Reading
+- **[Project Overview](docs/project_overview.md):** A comprehensive summary of the problem statement, HybridDFIR's automated pipeline, system architecture, and real-world use cases.
+- **[Core Forensics Concepts](docs/forensics_concepts.md):** An easy-to-understand guide explaining the attack vectors HybridDFIR hunts for, including Registry Persistence, DLL Injection/Hollowing, and Network Command & Control (C2).
+
+### Complete Documentation Reference
+- [00 System Architecture](docs/00_system_architecture.md)
+- [01 Architecture Overview](docs/01_Architecture_Overview.md)
+- [02 Evidence Intake](docs/02_Evidence_Intake.md)
+- [03 Disk Analysis](docs/03_Disk_Analysis.md)
+- [04 Memory Analysis](docs/04_Memory_Analysis.md)
+- [05 Correlation Engine](docs/05_Correlation_Engine.md)
+- [06 Action Response](docs/06_Action_Response.md)
+- [07 Module Deep Dive](docs/07_Module_Deep_Dive.md)
+- [08 Threat Scoring Methodology](docs/08_Threat_Scoring_Methodology.md)
+- [09 Disk and Intake Engine](docs/09_Disk_and_Intake_Engine.md)
+- [10 Reporting and UI Engine](docs/10_Reporting_and_UI_Engine.md)
+- [11 Data Models and Configuration](docs/11_Data_Models_and_Configuration.md)
+- [12 Command Line Interface](docs/12_Command_Line_Interface.md)
+- [13 Malware Analysis Case Study](docs/13_Malware_Analysis_Case_Study.md)
+- [17 Installation and QuickStart](docs/17_Installation_and_QuickStart.md)
+- [18 Troubleshooting and FAQ](docs/18_Troubleshooting_and_FAQ.md)
+- [19 Developer Integration Guide](docs/19_Developer_Integration_Guide.md)
+- [20 Release Notes](docs/20_release_notes.md)
+- [21 Installation and Manual Checking Guide](docs/21_Installation_and_Manual_Checking_Guide.md)
+- [30 Final Architecture Review](docs/30_Final_Architecture_Review.md)
+
+---
+
+## System Architecture
 
 The framework relies on a centralized `CaseManager` state engine that processes data through a multi-stage pipeline:
 
@@ -44,7 +76,7 @@ hybrid-forensics-framework/
 └── main.py                    # Interactive CLI Orchestrator
 ```
 
-## 🛠️ Installation & Setup
+## Installation & Setup
 
 **Prerequisites**
 *   Python 3.8+ (Windows environments only)
@@ -75,7 +107,7 @@ Windows (PowerShell):
 pip install -r requirements.txt
 ```
 
-## 💻 Usage & CLI Operations
+## Usage & CLI Operations
 
 The framework is executed via the `src/main.py` orchestrator.
 **Note: Native RAM scanning requires Administrator privileges.**
@@ -109,7 +141,7 @@ Outputs are automatically saved in isolated case folders:
 *   `CASE_EXPORT_<timestamp>.json`: Full structured dataset for SIEM ingestion.
 *   `forensic_report.html`: Self-contained interactive dashboard (requires no internet connection).
 
-## 🕵️ Cross-Module Threat Correlation
+## Cross-Module Threat Correlation
 
 The correlation engine utilizes 12 specific heuristic rules, ranging from isolated anomalies to complex cross-module attack patterns:
 *   **Rule 8 (Process + Network):** Detects highly suspicious memory regions executing outbound connections (C2 implants).
@@ -117,7 +149,7 @@ The correlation engine utilizes 12 specific heuristic rules, ranging from isolat
 *   **Rule 10 (DLL + Memory):** Unbacked injected DLLs matched with RWX memory regions.
 *   **Rule 12 (LOLBin Chaining):** Detects simultaneous execution of Living-Off-The-Land binaries (`certutil.exe` -> `powershell.exe`).
 
-## 🧪 Testing Suite
+## Testing Suite
 
 Run the automated test suite to ensure all internal modules and JSON schemas are functioning correctly:
 
@@ -127,7 +159,7 @@ pytest tests/ -v
 
 ---
 *Built for modern Windows Endpoint Security Analysis.*
-⚠️ **Disclaimer:** This tool is designed for educational, research, and legitimate incident response purposes. Always ensure you have explicit authorization before analyzing systems or digital evidence.
+**Disclaimer:** This tool is designed for educational, research, and legitimate incident response purposes. Always ensure you have explicit authorization before analyzing systems or digital evidence.
 
 ## Open-Source & Licensing
 

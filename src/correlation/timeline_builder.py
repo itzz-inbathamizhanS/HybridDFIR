@@ -70,7 +70,7 @@ class TimelineBuilder:
         """
         for event in events:
             self.master_timeline.append({
-                "timestamp": event.get("timestamp", datetime.datetime.utcnow().isoformat() + "Z"),
+                "timestamp": event.get("timestamp", datetime.datetime.now(datetime.UTC).isoformat() + "Z"),
                 "source_module": event.get("source_module", "memory"),
                 "event_type": event.get("event_type", "THREAT_DETECTED"),
                 "description": event.get("description", ""),
@@ -90,7 +90,7 @@ class TimelineBuilder:
         with open(output_path, "w", encoding="utf-8") as fp:
             json.dump({
                 "timeline_events": len(timeline),
-                "generated_utc": datetime.datetime.utcnow().isoformat() + "Z",
+                "generated_utc": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
                 "events": timeline,
             }, fp, indent=2, default=str)
         logger.info("Saved timeline with %d events to %s", len(timeline), output_path)

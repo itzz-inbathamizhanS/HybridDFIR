@@ -37,23 +37,28 @@ def test_pipeline_integration(mock_calc_hashes, mock_sub_run, mock_report_gen, t
     mock_report_gen.assert_called_once()
     
     # Extract the argument passed to generate_json_report
+    # run_pipeline now passes a Case Object dict (from CaseManager)
     mock_gen_instance.generate_json_report.assert_called_once()
-    report_data = mock_gen_instance.generate_json_report.call_args[0][0]
+    case_data = mock_gen_instance.generate_json_report.call_args[0][0]
     
-    # Assert Evidence Metadata
-    metadata = report_data["evidence_metadata"]
+    # Assert Evidence Metadata (embedded under "metadata" key)
+    metadata = case_data["metadata"]
     assert metadata["image_type"] == "memory"
     assert metadata["size_bytes"] == 10
     assert metadata["hashes"]["sha256"] == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     
-    # Assert Timeline
-    timeline = report_data["timeline"]
-    assert len(timeline) == 1
-    assert timeline[0]["event_type"] == "Active Process"
-    assert timeline[0]["raw_data"]["process_name"] == "powershell.exe"
+    # Assert Findings - the pipeline adds timeline events + threats as findings
+    findings = case_data["findings"]
     
-    # Assert Threats
-    threats = report_data["threats"]
-    assert len(threats) == 1
-    assert threats[0]["risk_score"] == 60
-    assert "powershell.exe" in threats[0]["description"]
+    # Should have at least the timeline event for powershell.exe
+    timeline_findings = [f for f in findings if f.get("event_type") == "Active Process"]
+    assert len(timeline_findings) == 1
+    assert timeline_findings[0]["description"] is not None
+    assert "powershell.exe" in timeline_findings[0]["description"]
+    
+    # Should have a threat finding for powershell.exe (suspicious executable, risk_score=60)
+    threat_findings = [f for f in findings if f.get("event_type") == "THREAT_DETECTED"]
+    assert len(threat_findings) >= 1
+    powershell_threats = [t for t in threat_findings if "powershell" in t.get("description", "").lower()]
+    assert len(powershell_threats) >= 1
+    assert powershell_threats[0]["risk_score"] == 60

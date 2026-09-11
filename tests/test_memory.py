@@ -14,7 +14,8 @@ def test_extract_running_processes(mock_run, tmp_path):
     
     # Pass the path of the newly created dummy file
     scanner = ProcessScanner(str(dummy_file))
-    processes = scanner.extract_running_processes()
+    result = scanner.extract_running_processes()
+    processes = result["processes"]
     
     assert len(processes) == 1
     assert processes[0]["pid"] == 1234

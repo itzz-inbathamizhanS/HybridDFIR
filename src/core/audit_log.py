@@ -1,6 +1,5 @@
 import json
 import datetime
-from pathlib import Path
 from src.config.settings import OUTPUT_DIR
 
 class AuditLog:
@@ -17,7 +16,7 @@ class AuditLog:
             return
             
         record = {
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
             "actor": actor,
             "action": action,
             "object": obj,

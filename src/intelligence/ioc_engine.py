@@ -75,7 +75,7 @@ class IOCEngine:
                     "description": f"Running process matches known malicious IOC: {name} (PID: {p['pid']})",
                     "risk_score": 100,
                     "ioc_value": name,
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+                    "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z"
                 })
                 
         # 2. Check Network Connections against IP/Domain IOCs
@@ -91,7 +91,7 @@ class IOCEngine:
                     "description": f"Process {c.get('process_name')} connected to malicious IP: {remote_ip}",
                     "risk_score": 100,
                     "ioc_value": remote_ip,
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+                    "timestamp": datetime.datetime.now(datetime.UTC).isoformat() + "Z"
                 })
                 
         self.render_results(findings)

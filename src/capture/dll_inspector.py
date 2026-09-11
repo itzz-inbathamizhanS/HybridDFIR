@@ -246,7 +246,7 @@ class DLLInspector:
                 "threat_labels": ["POSSIBLE_HOLLOWED_PROCESS"],
                 "risk_score": 80,
                 "mitre_ttps": [_DLL_MITRE["HOLLOWING"]],
-                "scan_timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+                "scan_timestamp_utc": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
             })
 
         for mod in modules:
@@ -311,7 +311,7 @@ class DLLInspector:
                     "threat_labels": threat_labels,
                     "risk_score": min(risk_score, 100),
                     "mitre_ttps": list(dict.fromkeys(mitre_ttps)),
-                    "scan_timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+                    "scan_timestamp_utc": datetime.datetime.now(datetime.UTC).isoformat() + "Z",
                 })
 
         return findings
@@ -401,8 +401,8 @@ class DLLInspector:
         table.add_column("Process", style="white", width=20)
         table.add_column("DLL Module", style="bright_yellow", width=22)
         table.add_column("DLL Path", style="dim", width=40, overflow="ellipsis")
-        table.add_column("Threat", width=26)
         table.add_column("Risk", justify="center", style="bold", width=6)
+        table.add_column("Threat", width=26)
 
         for f in sorted(findings, key=lambda x: x["risk_score"], reverse=True):
             risk = f["risk_score"]
@@ -419,8 +419,8 @@ class DLLInspector:
                 f["process_name"],
                 f["module_name"],
                 f["module_path"][:50] + ("..." if len(f["module_path"]) > 50 else ""),
-                Text(threat_text, style=threat_style),
                 Text(str(risk), style=risk_style),
+                Text(threat_text, style=threat_style),
             )
 
         self.console.print()
