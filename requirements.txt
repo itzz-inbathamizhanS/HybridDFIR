@@ -1,5 +1,5 @@
 rich==13.7.0
 questionary==2.0.1
-prompt_toolkit==3.0.43
+prompt_toolkit<=3.0.36
 pytest==7.4.4
 jsonschema==4.21.1
