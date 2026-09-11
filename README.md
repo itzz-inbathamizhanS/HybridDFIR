@@ -156,7 +156,7 @@ Run the automated test suite to ensure all internal modules and JSON schemas are
 ```bash
 pytest tests/ -v
 ```
-
+Set-Content requirements.txt "rich==13.7.0`nquestionary==2.0.1`npytest==7.4.4`njsonschema==4.21.1"
 ---
 *Built for modern Windows Endpoint Security Analysis.*
 **Disclaimer:** This tool is designed for educational, research, and legitimate incident response purposes. Always ensure you have explicit authorization before analyzing systems or digital evidence.
