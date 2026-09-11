@@ -30,6 +30,7 @@ New to the project or looking to understand the core concepts? Start here:
 ### Core Reading
 - **[Project Overview](docs/project_overview.md):** A comprehensive summary of the problem statement, HybridDFIR's automated pipeline, system architecture, and real-world use cases.
 - **[Core Forensics Concepts](docs/forensics_concepts.md):** An easy-to-understand guide explaining the attack vectors HybridDFIR hunts for, including Registry Persistence, DLL Injection/Hollowing, and Network Command & Control (C2).
+- **[Commands & Usage Guide](docs/commands_guide.md):** A complete reference manual for all available interactive REPL and direct CLI commands with examples.
 
 ### Complete Documentation Reference
 - [00 System Architecture](docs/00_system_architecture.md)
