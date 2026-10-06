@@ -216,6 +216,16 @@ class ThreatScorer:
                 )
 
             # ===================================================
+            # RULE 8H: Hardware (FSU) W^X violation: instruction fetch from a written page
+            # ===================================================
+            if event["source_module"] == "hardware" and event["event_type"] == "FSU_WX_VIOLATION":
+                risk_score += 100
+                threat_descriptions.append(
+                    event.get("description", "Hardware W^X violation")
+                )
+                mitre_ttps.append("T1620")  # Reflective Code Loading
+
+            # ===================================================
             # Emit CorrelatedEvent if any threat found
             # ===================================================
             if risk_score > 0:

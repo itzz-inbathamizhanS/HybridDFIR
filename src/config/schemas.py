@@ -33,7 +33,7 @@ class MemoryProcess(TypedDict):
 
 class CorrelatedEvent(TypedDict):
     timestamp: str
-    source_module: Literal["disk", "memory", "intake"]
+    source_module: Literal["disk", "memory", "intake", "hardware"]
     event_type: str
     description: str
     risk_score: int

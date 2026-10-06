@@ -168,7 +168,7 @@
     "required": ["timestamp", "source_module", "event_type", "description", "risk_score"],
     "properties": {
       "timestamp": { "type": "string" },
-      "source_module": { "type": "string", "enum": ["disk", "memory", "intake"] },
+      "source_module": { "type": "string", "enum": ["disk", "memory", "intake", "hardware"] },
       "event_type": { "type": "string" },
       "description": { "type": "string" },
       "risk_score": { "type": "integer", "minimum": 0, "maximum": 100 },

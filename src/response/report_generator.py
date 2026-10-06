@@ -72,6 +72,37 @@ class ReportGenerator:
 
         gen_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
+        # Optional hardware (FSU) section
+        hw = case_data.get("hardware")
+        hardware_html = ""
+        if hw:
+            hw_rows = "".join(
+                f"<tr><td class='mono'>{e.get('timestamp')}</td><td>{e.get('event_type')}</td>"
+                f"<td>{e.get('description')}</td></tr>" for e in hw.get("events", []))
+            ev_rows = "".join(
+                f"<tr><td class='mono'>{x.get('page')}</td><td>{x.get('size')}</td>"
+                f"<td class='mono'>{x.get('sha256')}</td></tr>" for x in hw.get("evidence", []))
+            stats_txt = ", ".join(f"{k}={v}" for k, v in hw.get("stats", {}).items()) or "n/a"
+            hardware_html = f"""
+        <!-- Hardware layer (FSU) -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Hardware layer (FSU)</h2>
+            </div>
+            <div class="table-scroll">
+                <p style="padding:0 16px;">gem5 simulation. Timestamps are simulated time, not wall-clock. Run stats: {stats_txt}</p>
+                <table>
+                    <thead><tr><th>Sim time</th><th>Event</th><th>Detail</th></tr></thead>
+                    <tbody>{hw_rows or '<tr><td colspan="3" class="empty-state">No FSU events.</td></tr>'}</tbody>
+                </table>
+                <table>
+                    <thead><tr><th>Evidence page</th><th>Bytes</th><th>SHA-256</th></tr></thead>
+                    <tbody>{ev_rows or '<tr><td colspan="3" class="empty-state">None.</td></tr>'}</tbody>
+                </table>
+            </div>
+        </div>
+"""
+
         # Build threats table rows
         threats_html = ""
         # Sort threats by risk score descending
@@ -356,6 +387,7 @@ class ReportGenerator:
         }}
         .source-disk {{ background: rgba(188, 140, 255, 0.15); color: var(--accent-purple); }}
         .source-memory {{ background: rgba(57, 208, 216, 0.15); color: var(--accent-cyan); }}
+        .source-hardware {{ background: rgba(248, 81, 73, 0.15); color: #f85149; }}
         .source-intake {{ background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); }}
         .source-unknown {{ background: rgba(110, 118, 129, 0.15); color: var(--text-muted); }}
 
@@ -482,6 +514,8 @@ class ReportGenerator:
                 </table>
             </div>
         </div>
+
+        {hardware_html}
 
         <!-- Threats Table -->
         <div class="panel">

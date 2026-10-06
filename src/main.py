@@ -760,6 +760,7 @@ def interactive_repl():
 
             table.add_row("", "")
             table.add_row("[dim]-- General --[/dim]", "")
+            table.add_row("/fsu <folder>", "[HARDWARE] Import FSU (gem5) results + HTML/JSON report")
             table.add_row("/clear", "Clear the terminal")
             table.add_row("/exit", "Exit the framework")
             console.print(table)
@@ -850,6 +851,28 @@ def interactive_repl():
                         "events": dll_events,
                     }, fp, indent=2)
                 console.print(f"\n[bold green][+] Report saved:[/bold green] {report_path}\n")
+
+        # -- Hardware FSU import --
+        elif cmd == "/fsu":
+            if len(parts) < 2:
+                console.print("[red]Usage: /fsu <results_folder>[/red]")
+                continue
+            try:
+                from src.hardware.fsu_importer import import_fsu_results
+                from src.correlation.threat_scorer import ThreatScorer
+                from src.response.report_generator import ReportGenerator
+                hw = import_fsu_results(parts[1])
+                threats = ThreatScorer().evaluate_timeline(hw["events"])
+                case_data = {"findings": hw["events"] + threats, "relationships": [], "hardware": hw}
+                gen = ReportGenerator("fsu_import")
+                json_path = gen.generate_json_report(case_data)
+                html_path = gen.generate_html_report(case_data)
+                n_alerts = sum(1 for e in hw["events"] if e["event_type"] == "FSU_WX_VIOLATION")
+                console.print(f"[bold green][+] FSU import:[/bold green] {n_alerts} W^X alert(s), "
+                              f"{len(hw['evidence'])} evidence page(s), {len(threats)} threat(s)")
+                console.print(f"JSON: {json_path}\nHTML: {html_path}\n")
+            except (FileNotFoundError, ValueError) as e:
+                console.print(f"[red]FSU import failed: {e}[/red]")
 
         # -- Forensic Capture --
         elif cmd == "/capture":
